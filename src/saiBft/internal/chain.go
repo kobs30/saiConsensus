@@ -42,6 +42,47 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 		data := <-s.MsgQueue
 		//s.GlobalService.Logger.Debug("chain - got data", zap.Any("data", data)) // DEBUG
 		switch data.(type) {
+		case *models.Tx:
+			// skip if state is not initialized
+			if !s.IsInitialized {
+				continue
+			}
+			txMsg := data.(*models.Tx)
+			Service.GlobalService.Logger.Sugar().Debugf("chain - got tx message : %+v", txMsg) //DEBUG
+
+			msg := &models.TransactionMessage{
+				Tx:          txMsg,
+				MessageHash: txMsg.MessageHash,
+			}
+			err := msg.Validate()
+			if err != nil {
+				Service.GlobalService.Logger.Error("listenFromSaiP2P - transactionMsg - validate", zap.Error(err))
+				continue
+			}
+			err = utils.ValidateSignature(msg, saiBtcAddress, msg.Tx.SenderAddress, msg.Tx.SenderSignature)
+			if err != nil {
+				Service.GlobalService.Logger.Error("listenFromSaiP2P - tx msg - validate signature ", zap.Error(err))
+				continue
+			}
+
+			err, result := s.Storage.Get("MessagesPool", msg, bson.M{}, storageToken)
+			if err != nil {
+				Service.GlobalService.Logger.Error("listenFromSaiP2P - transactionMsg - get from storage", zap.Error(err))
+				continue
+			}
+
+			if len(result) > 2 {
+				Service.GlobalService.Logger.Error("listenFromSaiP2P - transactionMsg - we have sent this message", zap.Error(err))
+				continue
+			}
+
+			err, _ = s.Storage.Put("MessagesPool", msg, storageToken)
+			if err != nil {
+				Service.GlobalService.Logger.Error("listenFromSaiP2P - transactionMsg - put to storage", zap.Error(err))
+				continue
+			}
+
+			Service.GlobalService.Logger.Sugar().Debugf("TransactionMsg was saved in MessagesPool storage, msg : %+v\n", msg)
 		case *models.TxFromHandler:
 			// skip if state is not initialized
 			if !s.IsInitialized {

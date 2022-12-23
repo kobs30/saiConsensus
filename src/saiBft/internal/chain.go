@@ -153,7 +153,6 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 			}
 			//			Service.GlobalService.Logger.Sugar().Debugf("ConsensusMsg was saved in ConsensusPool storage, msg : %+v\n", msg)
 			continue
-
 		case *models.BlockConsensusMessage:
 			msg := data.(*models.BlockConsensusMessage)
 			Service.GlobalService.Logger.Sugar().Debugf("chain - got block consensus message : %+v", msg) //DEBUG

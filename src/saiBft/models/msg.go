@@ -12,6 +12,7 @@ const (
 	BlockConsensusMsgType = "blockConsensus"
 	ConsensusMsgType      = "consensus"
 	TransactionMsgType    = "message"
+	RNDMessageType        = "rnd"
 )
 
 // main message, which comes from saiP2P service
@@ -62,6 +63,7 @@ type BlockConsensusMessage struct {
 	Block      *Block   `json:"block" valid:",required"`
 	Count      int      `json:"-"` // extended value for consensus while get missed blocks from p2p services
 	Signatures []string `json:"voted_signatures"`
+	BaseRND    int64    `json:"base_rnd"`
 }
 
 type Block struct {
@@ -105,6 +107,8 @@ type TransactionMessage struct {
 	BlockHash    string      `json:"block_hash"`
 	BlockNumber  int         `json:"block_number"`
 	ExecutedHash string      `json:"executed_hash"`
+	RndProcessed bool        `json:"rnd_processed"`
+	Nonce        int         `json:"nonce"`
 }
 
 // transaction struct
@@ -128,7 +132,7 @@ func (m *TransactionMessage) Validate() error {
 	return err
 }
 
-// Hashing block  message
+// Hashing tx
 func (m *Tx) GetHash() (string, error) {
 	b, err := json.Marshal(&Tx{
 		SenderAddress: m.SenderAddress,
@@ -173,4 +177,48 @@ type TxFromHandler struct {
 type Parameters struct {
 	Validators     []string `json:"validators"`
 	IsBoorstrapped bool     `json:"is_bootstrapped"`
+}
+
+// RND message
+type RNDMessage struct {
+	Votes int  `json:"votes"`
+	RND   *RND `json:"message"`
+}
+
+// RND
+type RND struct {
+	Type            string   `json:"type" valid:",required"`
+	SenderAddress   string   `json:"sender_address" valid:",required"`
+	BlockNumber     int      `json:"block_number" valid:",required"`
+	Round           int      `json:"round" valid:",required"`
+	Rnd             int64    `json:"rnd" valid:",required"`
+	Hash            string   `json:"hash" valid:",required"`
+	TxMsgHashes     []string `json:"tx_hashes"`
+	SenderSignature string   `json:"sender_signature" valid:",required"`
+}
+
+// Validate RND message
+func (m *RNDMessage) Validate() error {
+	_, err := valid.ValidateStruct(m)
+	return err
+}
+
+// Hashing RND  message
+func (m *RNDMessage) GetHash() (string, error) {
+	b, err := json.Marshal(&RNDMessage{
+		RND: &RND{
+			Type:          m.RND.Type,
+			SenderAddress: m.RND.SenderAddress,
+			BlockNumber:   m.RND.BlockNumber,
+			Round:         m.RND.Round,
+			Rnd:           m.RND.Rnd,
+			TxMsgHashes:   m.RND.TxMsgHashes,
+		},
+	})
+	if err != nil {
+		return "", err
+	}
+
+	hash := sha256.Sum256(b)
+	return hex.EncodeToString(hash[:]), nil
 }

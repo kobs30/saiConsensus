@@ -1,6 +1,8 @@
 package internal
 
 import (
+	"time"
+
 	"github.com/iamthe1whoknocks/bft/models"
 	"github.com/iamthe1whoknocks/bft/utils"
 	"go.uber.org/zap"
@@ -12,6 +14,7 @@ import (
 func (s *InternalService) saveTestTx(saiBtcAddress, storageToken, saiP2PAddress string) {
 	testTxMsg := &models.TransactionMessage{
 		Votes: [7]uint64{},
+		Nonce: time.Now().Nanosecond(),
 		Tx: &models.Tx{
 			Type:          models.TransactionMsgType,
 			SenderAddress: s.BTCkeys.Address,

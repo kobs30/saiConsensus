@@ -65,7 +65,7 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				continue
 			}
 
-			err, result := s.Storage.Get("MessagesPool", msg, bson.M{}, storageToken)
+			err, result := s.Storage.Get(MessagesPoolCol, msg, bson.M{}, storageToken)
 			if err != nil {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - transactionMsg - get from storage", zap.Error(err))
 				continue
@@ -76,7 +76,7 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				continue
 			}
 
-			err, _ = s.Storage.Put("MessagesPool", msg, storageToken)
+			err, _ = s.Storage.Put(MessagesPoolCol, msg, storageToken)
 			if err != nil {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - transactionMsg - put to storage", zap.Error(err))
 				continue
@@ -107,7 +107,7 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				continue
 			}
 
-			err, result := s.Storage.Get("MessagesPool", msg, bson.M{}, storageToken)
+			err, result := s.Storage.Get(MessagesPoolCol, msg, bson.M{}, storageToken)
 			if err != nil {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - transactionMsg - get from storage", zap.Error(err))
 				continue
@@ -146,7 +146,7 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - consensusMsg - validate signature ", zap.Error(err))
 				continue
 			}
-			err, _ = s.Storage.Put("ConsensusPool", msg, storageToken)
+			err, _ = s.Storage.Put(ConsensusPoolCol, msg, storageToken)
 			if err != nil {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - consensusMsg - put to storage", zap.Error(err))
 				continue
@@ -197,6 +197,30 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - block consensus msg - put to storage", zap.Error(err))
 				continue
 			}
+		case *models.RNDMessage:
+			// skip if state is not initialized
+			if !s.IsInitialized {
+				continue
+			}
+			msg := data.(*models.RNDMessage)
+			Service.GlobalService.Logger.Sugar().Debugf("chain - got rnd message : %+v", msg) //DEBUG
+			err := msg.Validate()
+			if err != nil {
+				Service.GlobalService.Logger.Error("listenFromSaiP2P - rndMessage - validate", zap.Error(err))
+				continue
+			}
+			err = utils.ValidateSignature(msg, saiBtcAddress, msg.RND.SenderAddress, msg.RND.SenderSignature)
+			if err != nil {
+				Service.GlobalService.Logger.Error("listenFromSaiP2P - rndMessage - validate signature ", zap.Error(err))
+				continue
+			}
+			err, _ = s.Storage.Put(RndMessagesPoolCol, msg, storageToken)
+			if err != nil {
+				Service.GlobalService.Logger.Error("listenFromSaiP2P - rndMessage - put to storage", zap.Error(err))
+				continue
+			}
+			Service.GlobalService.Logger.Sugar().Debugf("RndMsg was saved in RndPool storage, msg : %+v\n", msg)
+			continue
 		default:
 			Service.GlobalService.Logger.Error("listenFromSaiP2P - got wrong msg type", zap.Any("type", reflect.TypeOf(data)))
 		}

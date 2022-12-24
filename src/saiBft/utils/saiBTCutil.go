@@ -94,6 +94,18 @@ func ValidateSignature(msg interface{}, address, SenderAddress, signature string
 		if err != nil {
 			return fmt.Errorf("marshal TransactionMessage : %w", err)
 		}
+	case *models.RNDMessage:
+		rndMsg := msg.(*models.RNDMessage)
+		b, err = json.Marshal(&models.RNDMessage{
+			RND: &models.RND{
+				Type:          rndMsg.RND.Type,
+				SenderAddress: rndMsg.RND.SenderAddress,
+				BlockNumber:   rndMsg.RND.BlockNumber,
+				Round:         rndMsg.RND.Round,
+				Rnd:           rndMsg.RND.Rnd,
+				TxMsgHashes:   rndMsg.RND.TxMsgHashes,
+			},
+		})
 	default:
 		return fmt.Errorf("unknown type of message, incoming type : %+v\n", reflect.TypeOf(msg))
 	}
@@ -160,6 +172,22 @@ func SignMessage(msg interface{}, address, privateKey string) (resp *models.Sign
 		data, err := json.Marshal(&models.Tx{
 			SenderAddress: TxMsg.SenderAddress,
 			Message:       TxMsg.Message,
+		})
+		if err != nil {
+			return nil, err
+		}
+		preparedString = fmt.Sprintf("method=signMessage&p=%s&message=%s", privateKey, string(data))
+	case *models.RNDMessage:
+		rndMsg := msg.(*models.RNDMessage)
+		data, err := json.Marshal(&models.RNDMessage{
+			RND: &models.RND{
+				Type:          rndMsg.RND.Type,
+				SenderAddress: rndMsg.RND.SenderAddress,
+				BlockNumber:   rndMsg.RND.BlockNumber,
+				Round:         rndMsg.RND.Round,
+				Rnd:           rndMsg.RND.Rnd,
+				TxMsgHashes:   rndMsg.RND.TxMsgHashes,
+			},
 		})
 		if err != nil {
 			return nil, err

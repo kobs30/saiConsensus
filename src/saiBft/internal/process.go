@@ -30,6 +30,7 @@ const (
 	ConsensusPoolCol   = "ConsensusPool"
 	BlockCandidatesCol = "BlockCandidates"
 	ParametersCol      = "Parameters"
+	RndMessagesPoolCol = "RNDPool"
 	maxRoundNumber     = 7
 	btcKeyFile         = "btc_keys.json"
 )
@@ -110,6 +111,14 @@ func (s *InternalService) Processing() {
 		if err != nil {
 			continue
 		}
+
+		rnd, err := s.rndProcessing(saiBtcAddress, saiP2Paddress, storageToken, block.Block.Number)
+		if err != nil {
+			s.GlobalService.Logger.Error("process - process rnd", zap.Error(err))
+			continue
+		}
+		s.GlobalService.Logger.Debug("processing - got rnd", zap.Int("block_number", block.Block.Number), zap.Int64("rnd", rnd.RND.Rnd))
+
 	checkRound:
 		s.GlobalService.Logger.Sugar().Debugf("ROUND = %d", round) //DEBUG
 		if round == 0 {
@@ -255,7 +264,7 @@ func (s *InternalService) Processing() {
 			} else {
 				s.GlobalService.Logger.Sugar().Debugf("ROUND = %d", round) //DEBUG
 
-				newBlock, err := s.formAndSaveNewBlock(block, saiBtcAddress, storageToken, txMsgs)
+				newBlock, err := s.formAndSaveNewBlock(block, saiBtcAddress, storageToken, txMsgs, rnd.RND.Rnd)
 				if err != nil {
 					goto startLoop
 				}
@@ -343,7 +352,7 @@ func (s *InternalService) createInitialBlock(address string) (block *models.Bloc
 
 // get messages with votes = 0
 func (s *InternalService) getZeroVotedTransactions(storageToken string) ([]*models.TransactionMessage, error) {
-	err, result := s.Storage.Get("MessagesPool", bson.M{"votes.0": 0}, bson.M{}, storageToken)
+	err, result := s.Storage.Get("MessagesPool", bson.M{"votes.0": 0, "rnd_processed": true}, bson.M{}, storageToken)
 	if err != nil {
 		s.GlobalService.Logger.Error("process - round = 0 - get messages with 0 votes", zap.Error(err))
 		return nil, err
@@ -496,9 +505,10 @@ func (s *InternalService) broadcastMsg(msg interface{}, saiP2Paddress string) er
 }
 
 // form and save new block
-func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsensusMessage, saiBTCaddress, storageToken string, txMsgs []*models.TransactionMessage) (*models.BlockConsensusMessage, error) {
+func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsensusMessage, saiBTCaddress, storageToken string, txMsgs []*models.TransactionMessage, rnd int64) (*models.BlockConsensusMessage, error) {
 	newBlock := &models.BlockConsensusMessage{
-		Type: models.BlockConsensusMsgType,
+		Type:    models.BlockConsensusMsgType,
+		BaseRND: rnd,
 		Block: &models.Block{
 			Number:            previousBlock.Block.Number,
 			PreviousBlockHash: previousBlock.BlockHash,
@@ -527,7 +537,7 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 	newBlock.Signatures = append(newBlock.Signatures, btcResp.Signature)
 
 	for _, tx := range txMsgs {
-		err, _ := s.Storage.Update("MessagesPool", bson.M{"executed_hash": tx.ExecutedHash}, bson.M{"block_hash": newBlock.BlockHash, "block_number": newBlock.Block.Number}, storageToken)
+		err, _ := s.Storage.Update(MessagesPoolCol, bson.M{"executed_hash": tx.ExecutedHash}, bson.M{"block_hash": newBlock.BlockHash, "block_number": newBlock.Block.Number}, storageToken)
 		if err != nil {
 			s.GlobalService.Logger.Error("process - round == 7 - form and save new block - update tx blockhash", zap.Error(err))
 			return nil, err
@@ -543,7 +553,7 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 	requiredVotes := math.Ceil(float64(len(s.Validators)) * 7 / 10)
 
 	if float64(newBlock.Votes) >= requiredVotes {
-		err, _ := s.Storage.Put("Blockchain", newBlock, storageToken)
+		err, _ := s.Storage.Put(blockchainCol, newBlock, storageToken)
 		if err != nil {
 			s.GlobalService.Logger.Error("handleBlockConsensusMsg - blockHash = msgBlockHash - insert block to BlockCandidates collection", zap.Error(err))
 			return nil, err

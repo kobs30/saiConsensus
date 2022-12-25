@@ -207,6 +207,18 @@ var HandleMessage = saiService.HandlerElement{
 				return nil, fmt.Errorf("handlers - handle message - marshal bytes : %w", err)
 			}
 			Service.MsgQueue <- &msg
+		case models.RNDMessageType:
+			Service.GlobalService.Logger.Sugar().Debugf("got message from saiP2p detected type : %s", models.RNDMessageType) // DEBUG
+			msg := models.RNDMessage{}
+			b, err := json.Marshal(m)
+			if err != nil {
+				return nil, fmt.Errorf("handlers - handle message - unmarshal : %w", err)
+			}
+			err = json.Unmarshal(b, &msg)
+			if err != nil {
+				return nil, fmt.Errorf("handlers - handle message - marshal bytes : %w", err)
+			}
+			Service.MsgQueue <- &msg
 		default:
 			Service.GlobalService.Logger.Sugar().Errorf("got message from saiP2p wrong detected type : %s", m["type"].(string)) // DEBUG
 			return nil, errors.New("handlers - handle message - wrong message type" + m["type"].(string))

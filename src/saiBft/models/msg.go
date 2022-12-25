@@ -181,13 +181,13 @@ type Parameters struct {
 
 // RND message
 type RNDMessage struct {
-	Votes int  `json:"votes"`
-	RND   *RND `json:"message"`
+	Votes int    `json:"votes"`
+	Type  string `json:"type" valid:",required"`
+	RND   *RND   `json:"message"`
 }
 
 // RND
 type RND struct {
-	Type            string   `json:"type" valid:",required"`
 	SenderAddress   string   `json:"sender_address" valid:",required"`
 	BlockNumber     int      `json:"block_number" valid:",required"`
 	Round           int      `json:"round" valid:",required"`
@@ -206,8 +206,8 @@ func (m *RNDMessage) Validate() error {
 // Hashing RND  message
 func (m *RNDMessage) GetHash() (string, error) {
 	b, err := json.Marshal(&RNDMessage{
+		Type: m.Type,
 		RND: &RND{
-			Type:          m.RND.Type,
 			SenderAddress: m.RND.SenderAddress,
 			BlockNumber:   m.RND.BlockNumber,
 			Round:         m.RND.Round,

@@ -97,8 +97,8 @@ func ValidateSignature(msg interface{}, address, SenderAddress, signature string
 	case *models.RNDMessage:
 		rndMsg := msg.(*models.RNDMessage)
 		b, err = json.Marshal(&models.RNDMessage{
+			Type: rndMsg.Type,
 			RND: &models.RND{
-				Type:          rndMsg.RND.Type,
 				SenderAddress: rndMsg.RND.SenderAddress,
 				BlockNumber:   rndMsg.RND.BlockNumber,
 				Round:         rndMsg.RND.Round,
@@ -180,8 +180,8 @@ func SignMessage(msg interface{}, address, privateKey string) (resp *models.Sign
 	case *models.RNDMessage:
 		rndMsg := msg.(*models.RNDMessage)
 		data, err := json.Marshal(&models.RNDMessage{
+			Type: models.RNDMessageType,
 			RND: &models.RND{
-				Type:          rndMsg.RND.Type,
 				SenderAddress: rndMsg.RND.SenderAddress,
 				BlockNumber:   rndMsg.RND.BlockNumber,
 				Round:         rndMsg.RND.Round,

@@ -57,8 +57,8 @@ func (s *InternalService) rndProcessing(saiBTCAddress, saiP2pAddress, storageTok
 
 	rndMsg := &models.RNDMessage{
 		Votes: 1,
+		Type:  models.RNDMessageType,
 		RND: &models.RND{
-			Type:          models.RNDMessageType,
 			SenderAddress: s.BTCkeys.Address,
 			BlockNumber:   blockNumber,
 			Round:         rndRound,

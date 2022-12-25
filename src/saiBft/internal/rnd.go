@@ -124,7 +124,18 @@ getRndForSpecifiedRoundAndBlock:
 			return nil, err
 		}
 
+		filteredRndMsgs := make([]*models.RNDMessage, 0)
+
+		// filter messages which is not from validator list
 		for _, msg := range rndMsgs {
+			for _, validator := range s.Validators {
+				if validator == msg.RND.SenderAddress {
+					filteredRndMsgs = append(filteredRndMsgs, msg)
+				}
+			}
+		}
+
+		for _, msg := range filteredRndMsgs {
 			if msg.RND.Rnd == rnd {
 				msg.Votes++
 			} else {

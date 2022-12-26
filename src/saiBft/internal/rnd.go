@@ -103,7 +103,7 @@ func (s *InternalService) rndProcessing(saiBTCAddress, saiP2pAddress, storageTok
 getRndForSpecifiedRoundAndBlock:
 	rndRound++
 
-	s.GlobalService.Logger.Debug("process - rnd processing started - new round", zap.Int("round", rndRound))
+	s.GlobalService.Logger.Debug("process - rnd processing -  new round", zap.Int("round", rndRound))
 
 	// get rnd messages for the round and for block
 	err, result = s.Storage.Get(RndMessagesPoolCol, bson.M{"message.block_number": blockNumber}, bson.M{}, storageToken)
@@ -147,7 +147,7 @@ getRndForSpecifiedRoundAndBlock:
 				rnd += msg.RND.Rnd
 			}
 
-			err, _ = s.Storage.Put(RndMessagesPoolCol, rndMsg, storageToken)
+			err, _ = s.Storage.Put(RndMessagesPoolCol, msg, storageToken)
 			if err != nil {
 				s.GlobalService.Logger.Error("process - rnd processing - put to db", zap.Error(err))
 				return nil, err

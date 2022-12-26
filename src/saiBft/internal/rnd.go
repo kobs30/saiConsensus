@@ -146,6 +146,13 @@ getRndForSpecifiedRoundAndBlock:
 			} else {
 				rnd += msg.RND.Rnd
 			}
+
+			err, _ = s.Storage.Put(RndMessagesPoolCol, rndMsg, storageToken)
+			if err != nil {
+				s.GlobalService.Logger.Error("process - rnd processing - put to db", zap.Error(err))
+				return nil, err
+			}
+
 			err = s.broadcastMsg(msg, saiP2pAddress)
 			if err != nil {
 				s.GlobalService.Logger.Error("processing - rnd processing - broadcast msg", zap.Error(err))

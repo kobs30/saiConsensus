@@ -203,7 +203,7 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				continue
 			}
 			msg := data.(*models.RNDMessage)
-			Service.GlobalService.Logger.Sugar().Debugf("chain - got rnd message : %+v", msg) //DEBUG
+			//Service.GlobalService.Logger.Sugar().Debugf("chain - got rnd message : %+v", msg) //DEBUG
 			err := msg.Validate()
 			if err != nil {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - rndMessage - validate", zap.Error(err))

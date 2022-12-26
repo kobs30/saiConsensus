@@ -190,7 +190,7 @@ type RNDMessage struct {
 type RND struct {
 	SenderAddress   string   `json:"sender_address" valid:",required"`
 	BlockNumber     int      `json:"block_number" valid:",required"`
-	Round           int      `json:"round" valid:",required"`
+	Round           int      `json:"round"`
 	Rnd             int64    `json:"rnd" valid:",required"`
 	Hash            string   `json:"hash" valid:",required"`
 	TxMsgHashes     []string `json:"tx_hashes"`

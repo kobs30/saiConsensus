@@ -52,7 +52,7 @@ func (s *InternalService) rndProcessing(saiBTCAddress, saiP2pAddress, storageTok
 	s.GlobalService.Logger.Debug("process - rnd processing", zap.Any("tx messages candidates", txMsgs), zap.Int("round", rndRound))
 
 	source := rand.New(rand.NewSource(time.Now().UnixNano()))
-	rnd := source.Int63n(100000)
+	rnd := source.Int63n(1000)
 	s.GlobalService.Logger.Debug("rnd generated", zap.Int64("rnd", rnd))
 
 	rndMsg := &models.RNDMessage{
@@ -94,7 +94,7 @@ func (s *InternalService) rndProcessing(saiBTCAddress, saiP2pAddress, storageTok
 		return nil, err
 	}
 
-	rndMsg, err = s.getValidatedRnd(storageToken)
+	rndMsg, err = s.getValidatedRnd(storageToken, blockNumber)
 	if err != nil {
 		goto getRndForSpecifiedRoundAndBlock
 	}
@@ -103,12 +103,15 @@ func (s *InternalService) rndProcessing(saiBTCAddress, saiP2pAddress, storageTok
 getRndForSpecifiedRoundAndBlock:
 	rndRound++
 
+	s.GlobalService.Logger.Debug("process - rnd processing started - new round", zap.Int("round", rndRound))
+
 	// get rnd messages for the round and for block
-	err, result = s.Storage.Get(RndMessagesPoolCol, bson.M{"message.block_number": blockNumber, "message.round": rndRound}, bson.M{}, storageToken)
+	err, result = s.Storage.Get(RndMessagesPoolCol, bson.M{"message.block_number": blockNumber}, bson.M{}, storageToken)
 	if err != nil {
 		s.GlobalService.Logger.Error("processing - rnd processing - get rnd for specified round/block", zap.Error(err))
 		return nil, err
 	}
+	//s.GlobalService.Logger.Debug("process - rnd processing - got msg for block and round", zap.Int("block", blockNumber), zap.Int("round", rndRound), zap.String("rnd msgs", string(result)))
 
 	//if specified messages was found
 	if len(result) != 2 {
@@ -135,6 +138,8 @@ getRndForSpecifiedRoundAndBlock:
 			}
 		}
 
+		//s.GlobalService.Logger.Debug("process - rnd processing - rnd msgs after filtration", zap.Any("filtered msgs", filteredRndMsgs))
+
 		for _, msg := range filteredRndMsgs {
 			if msg.RND.Rnd == rnd {
 				msg.Votes++
@@ -148,14 +153,14 @@ getRndForSpecifiedRoundAndBlock:
 			}
 		}
 
-		rndMsg, err := s.getValidatedRnd(storageToken)
+		rndMsg, err := s.getValidatedRnd(storageToken, blockNumber)
 		if err != nil {
 			goto getRndForSpecifiedRoundAndBlock
 		}
 		return rndMsg, nil
 
 	}
-	rndMsg, err = s.getValidatedRnd(storageToken)
+	rndMsg, err = s.getValidatedRnd(storageToken, blockNumber)
 	if err != nil {
 		goto getRndForSpecifiedRoundAndBlock
 	}
@@ -164,9 +169,9 @@ getRndForSpecifiedRoundAndBlock:
 }
 
 // get message with the most votes
-func (s *InternalService) getRndMsgWithMostVotes(storageToken string) (*models.RNDMessage, error) {
+func (s *InternalService) getRndMsgWithMostVotes(storageToken string, blockNumber int) (*models.RNDMessage, error) {
 	opts := options.Find().SetSort(bson.M{"votes": -1}).SetLimit(1)
-	err, rndResult := s.Storage.Get(RndMessagesPoolCol, bson.M{}, opts, storageToken)
+	err, rndResult := s.Storage.Get(RndMessagesPoolCol, bson.M{"message.block_number": blockNumber}, opts, storageToken)
 	if err != nil {
 		s.GlobalService.Logger.Error("processing - rnd processing - get rnd with max votes", zap.Error(err))
 		return nil, err
@@ -191,9 +196,9 @@ func (s *InternalService) getRndMsgWithMostVotes(storageToken string) (*models.R
 }
 
 // get validated rnd to put in block
-func (s *InternalService) getValidatedRnd(storageToken string) (*models.RNDMessage, error) {
+func (s *InternalService) getValidatedRnd(storageToken string, blockNumber int) (*models.RNDMessage, error) {
 	time.Sleep(time.Duration(s.GlobalService.Configuration["sleep"].(int)) * time.Second)
-	rndMsg, err := s.getRndMsgWithMostVotes(storageToken)
+	rndMsg, err := s.getRndMsgWithMostVotes(storageToken, blockNumber)
 	if err != nil {
 		s.GlobalService.Logger.Error("processing - rnd processing - get validated rnd - get rnd with most votes", zap.Error(err))
 		return nil, err

@@ -189,7 +189,7 @@ func (s *InternalService) Processing() {
 					continue
 				}
 
-				s.GlobalService.Logger.Sugar().Debugf("Consensus message transactions: %v", msg.Messages) //DEBUG
+				//				s.GlobalService.Logger.Sugar().Debugf("Consensus message transactions: %v", msg.Messages) //DEBUG
 
 				// update votes for each tx message from consensusMsg
 				for _, txMsgHash := range msg.Messages {
@@ -585,12 +585,14 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 					s.GlobalService.Logger.Error("process - round == 7 - form and save new block - put block to blockchain collection", zap.Error(err))
 					return nil, err
 				}
+			} else {
+				err, _ := s.Storage.Put(BlockCandidatesCol, newBlock, storageToken)
+				if err != nil {
+					s.GlobalService.Logger.Error("process - round == 7 - form and save new block - put to BlockCandidate collection", zap.Error(err))
+					return nil, err
+				}
 			}
-			err, _ := s.Storage.Put(BlockCandidatesCol, newBlock, storageToken)
-			if err != nil {
-				s.GlobalService.Logger.Error("process - round == 7 - form and save new block - put to BlockCandidate collection", zap.Error(err))
-				return nil, err
-			}
+
 		}
 	}
 

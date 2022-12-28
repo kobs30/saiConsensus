@@ -82,7 +82,7 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				continue
 			}
 
-			Service.GlobalService.Logger.Sugar().Debugf("TransactionMsg was saved in MessagesPool storage, msg : %+v\n", msg)
+			//Service.GlobalService.Logger.Sugar().Debugf("TransactionMsg was saved in MessagesPool storage, msg : %+v\n", msg)
 		case *models.TxFromHandler:
 			// skip if state is not initialized
 			if !s.IsInitialized {

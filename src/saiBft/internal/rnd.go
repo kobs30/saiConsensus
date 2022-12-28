@@ -143,14 +143,20 @@ getRndForSpecifiedRoundAndBlock:
 		for _, msg := range filteredRndMsgs {
 			if msg.RND.Rnd == rnd {
 				msg.Votes++
+				criteria := bson.M{"message.hash": msg.RND.Hash}
+				update := bson.M{"$inc": bson.M{"votes": 1}}
+				err, _ := s.Storage.Upsert(RndMessagesPoolCol, criteria, update, storageToken)
+				if err != nil {
+					s.GlobalService.Logger.Error("handlers - process - round != 0 - get messages for specified round", zap.Error(err))
+					return nil, err
+				}
 			} else {
 				rnd += msg.RND.Rnd
-			}
-
-			err, _ = s.Storage.Put(RndMessagesPoolCol, msg, storageToken)
-			if err != nil {
-				s.GlobalService.Logger.Error("process - rnd processing - put to db", zap.Error(err))
-				return nil, err
+				err, _ = s.Storage.Put(RndMessagesPoolCol, msg, storageToken)
+				if err != nil {
+					s.GlobalService.Logger.Error("process - rnd processing - put to db", zap.Error(err))
+					return nil, err
+				}
 			}
 
 			err = s.broadcastMsg(msg, saiP2pAddress)

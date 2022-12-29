@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
@@ -136,7 +135,7 @@ func (s *Service) handleHttpConnections(resp http.ResponseWriter, req *http.Requ
 		return
 	}
 
-	fmt.Println(string(body))
+	//fmt.Println(string(body))
 
 	defer req.Body.Close()
 

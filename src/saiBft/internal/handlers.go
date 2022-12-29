@@ -166,11 +166,10 @@ var HandleMessage = saiService.HandlerElement{
 		if !ok {
 			return nil, fmt.Errorf("Wrong type of data  : %+v\n", reflect.TypeOf(data))
 		}
-		Service.GlobalService.Logger.Sugar().Debugf("got message from saiP2p : %+v", m) // DEBUG
+		//	Service.GlobalService.Logger.Sugar().Debugf("got message from saiP2p : %+v", m) // DEBUG
 
 		switch m["type"].(string) {
 		case models.BlockConsensusMsgType:
-			Service.GlobalService.Logger.Sugar().Debugf("got message from saiP2p detected type : %s", models.BlockConsensusMsgType) // DEBUG
 			msg := models.BlockConsensusMessage{}
 			b, err := json.Marshal(m)
 			if err != nil {
@@ -180,9 +179,7 @@ var HandleMessage = saiService.HandlerElement{
 			if err != nil {
 				return nil, fmt.Errorf("handlers - handle message - marshal bytes : %w", err)
 			}
-			Service.MsgQueue <- &msg
 		case models.ConsensusMsgType:
-			Service.GlobalService.Logger.Sugar().Debugf("got message from saiP2p detected type : %s", models.ConsensusMsgType) // DEBUG
 			msg := models.ConsensusMessage{}
 			b, err := json.Marshal(m)
 			if err != nil {
@@ -196,7 +193,6 @@ var HandleMessage = saiService.HandlerElement{
 			}
 			Service.MsgQueue <- &msg
 		case models.TransactionMsgType:
-			Service.GlobalService.Logger.Sugar().Debugf("got message from saiP2p detected type : %s", models.TransactionMsgType) // DEBUG
 			msg := models.Tx{}
 			b, err := json.Marshal(m)
 			if err != nil {
@@ -208,7 +204,6 @@ var HandleMessage = saiService.HandlerElement{
 			}
 			Service.MsgQueue <- &msg
 		case models.RNDMessageType:
-			Service.GlobalService.Logger.Sugar().Debugf("got message from saiP2p detected type : %s", models.RNDMessageType) // DEBUG
 			msg := models.RNDMessage{}
 			b, err := json.Marshal(m)
 			if err != nil {

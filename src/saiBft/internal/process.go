@@ -613,8 +613,8 @@ func (s *InternalService) updateTxMsgZeroVotes(storageToken string) error {
 	criteria := bson.M{"votes.0": bson.M{"$gte": 1}, "block_hash": ""}
 	update := bson.M{"votes": bson.A{0, 0, 0, 0, 0, 0, 0}}
 
-	_, result := s.Storage.Get("MessagesPool", criteria, bson.M{}, storageToken)
-	s.GlobalService.Logger.Sugar().Debugf("BEFORE UPDATING ON CLEAR RESULT : %s", string(result))
+	//_, result := s.Storage.Get("MessagesPool", criteria, bson.M{}, storageToken)
+	//	s.GlobalService.Logger.Sugar().Debugf("BEFORE UPDATING ON CLEAR RESULT : %s", string(result))
 
 	err, _ := s.Storage.Update("MessagesPool", criteria, update, storageToken)
 	if err != nil {
@@ -622,9 +622,9 @@ func (s *InternalService) updateTxMsgZeroVotes(storageToken string) error {
 		return err
 	}
 
-	criteria2 := bson.M{"block_hash": ""}
-	_, result2 := s.Storage.Get("MessagesPool", criteria2, bson.M{}, storageToken)
-	s.GlobalService.Logger.Sugar().Debugf("AFTER UPDATING ON CLEAR RESULT : %s", string(result2))
+	//criteria2 := bson.M{"block_hash": ""}
+	//_, result2 := s.Storage.Get("MessagesPool", criteria2, bson.M{}, storageToken)
+	//	s.GlobalService.Logger.Sugar().Debugf("AFTER UPDATING ON CLEAR RESULT : %s", string(result2))
 
 	return nil
 }

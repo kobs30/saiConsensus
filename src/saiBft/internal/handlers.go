@@ -179,6 +179,7 @@ var HandleMessage = saiService.HandlerElement{
 			if err != nil {
 				return nil, fmt.Errorf("handlers - handle message - marshal bytes : %w", err)
 			}
+			Service.MsgQueue <- &msg
 		case models.ConsensusMsgType:
 			msg := models.ConsensusMessage{}
 			b, err := json.Marshal(m)

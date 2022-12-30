@@ -272,6 +272,9 @@ func (s *InternalService) Processing() {
 				if newBlock.IsBroadcasted {
 					goto startLoop
 				}
+
+				newBlock.IsBroadcasted = true
+
 				err = s.broadcastMsg(newBlock, saiP2Paddress)
 				if err != nil {
 					goto startLoop

@@ -245,7 +245,7 @@ func (s *InternalService) Processing() {
 
 				err, _ = s.Storage.Put("ConsensusPool", newConsensusMsg, storageToken)
 				if err != nil {
-					s.GlobalService.Logger.Error("process - round == 0 - put consensus to ConsensusPool collection", zap.Error(err))
+					s.GlobalService.Logger.Error("process -  put consensus to ConsensusPool collection", zap.Error(err))
 					goto startLoop
 				}
 
@@ -268,11 +268,20 @@ func (s *InternalService) Processing() {
 				if err != nil {
 					goto startLoop
 				}
+
+				if newBlock.IsBroadcasted {
+					goto startLoop
+				}
 				err = s.broadcastMsg(newBlock, saiP2Paddress)
 				if err != nil {
 					goto startLoop
 				}
 
+				err, _ = s.Storage.Update(blockchainCol, bson.M{"block_hash": newBlock.BlockHash}, bson.M{"is_broadcasted": true}, storageToken)
+				if err != nil {
+					s.GlobalService.Logger.Error("process -  round = 7 - set is_broadcasted to true when broadcast block", zap.Error(err))
+
+				}
 				goto startLoop
 			}
 		}

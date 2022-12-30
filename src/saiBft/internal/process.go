@@ -576,22 +576,25 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 			}
 		} else { // else, add vote and signature and save to blockchain
 			s.GlobalService.Logger.Debug("found block candidate with formed block hash", zap.String("hash", newBlock.BlockHash))
-			newBlock.Votes = newBlock.Votes + blockCandidate.Votes
-			newBlock.Signatures = append(newBlock.Signatures, blockCandidate.Signatures...)
+			blockCandidate.Votes = newBlock.Votes + blockCandidate.Votes
+			blockCandidate.Signatures = append(blockCandidate.Signatures, newBlock.Signatures...)
 
-			if float64(newBlock.Votes) >= requiredVotes {
-				err, _ = s.Storage.Put(blockchainCol, newBlock, storageToken)
+			if float64(blockCandidate.Votes) >= requiredVotes {
+				err, _ = s.Storage.Put(blockchainCol, blockCandidate, storageToken)
 				if err != nil {
 					s.GlobalService.Logger.Error("process - round == 7 - form and save new block - put block to blockchain collection", zap.Error(err))
 					return nil, err
 				}
 			} else {
-				err, _ := s.Storage.Put(BlockCandidatesCol, newBlock, storageToken)
+				filter := bson.M{"block_hash": blockCandidate.BlockHash}
+				update := bson.M{"votes": blockCandidate.Votes, "voted_signatures": blockCandidate.Signatures}
+				err, _ := s.Storage.Update(BlockCandidatesCol, filter, update, storageToken)
 				if err != nil {
 					s.GlobalService.Logger.Error("process - round == 7 - form and save new block - put to BlockCandidate collection", zap.Error(err))
 					return nil, err
 				}
 			}
+			newBlock = blockCandidate
 
 		}
 	}
@@ -602,7 +605,7 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 		return nil, err
 	}
 
-	s.GlobalService.Logger.Sugar().Debugf(" formed new block to save: %+v\n", newBlock) //DEBUG
+	s.GlobalService.Logger.Sugar().Debugf("formed new block to save: %+v\n", newBlock) //DEBUG
 
 	return newBlock, nil
 

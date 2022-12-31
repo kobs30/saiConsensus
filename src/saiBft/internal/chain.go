@@ -260,6 +260,11 @@ func (s *InternalService) handleBlockConsensusMsg(saiBTCaddress, saiP2pProxyAddr
 	s.GlobalService.Logger.Debug("chain - handleBlockConsensus - block found", zap.Int("block_number", block.Block.Number), zap.String("block_hash", block.BlockHash), zap.Int("votes", block.Votes))
 
 	if block.BlockHash == msg.BlockHash {
+		for _, addr := range msg.VotedAddresses { // check if block was already voted by this address
+			if addr == s.BTCkeys.Address {
+				return nil
+			}
+		}
 		err := s.addVotesToBlock(&block, msg, storageToken)
 		if err != nil {
 			s.GlobalService.Logger.Error("handleBlockConsensusMsg - blockHash = msgBlockHash - add votes to block", zap.Error(err))
@@ -361,6 +366,12 @@ func (s *InternalService) handleBlockCandidate(msg *models.BlockConsensusMessage
 			return err
 		}
 		return nil
+	}
+
+	for _, addr := range msg.VotedAddresses { // check if block was already voted by this address
+		if addr == s.BTCkeys.Address {
+			return nil
+		}
 	}
 
 	s.GlobalService.Logger.Debug("chain - handleBlockConsensus - handleBlockCandidate - found candidate", zap.Int("block_number", blockCandidate.Block.Number), zap.String("block_hash", blockCandidate.BlockHash), zap.Int("votes", blockCandidate.Votes), zap.Strings("signatures", blockCandidate.Signatures))

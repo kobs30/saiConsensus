@@ -589,10 +589,18 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 			}
 		} else { // else, add vote and signature and save to blockchain
 			s.GlobalService.Logger.Debug("found block candidate with formed block hash", zap.String("hash", newBlock.BlockHash))
+
+			for _, addr := range blockCandidate.VotedAddresses { // check if block was already voted by this address
+				if addr == s.BTCkeys.Address {
+					goto skipVoting
+				}
+			}
+
 			blockCandidate.Votes = newBlock.Votes + blockCandidate.Votes
 			blockCandidate.Signatures = append(blockCandidate.Signatures, newBlock.Signatures...)
 			blockCandidate.VotedAddresses = append(blockCandidate.VotedAddresses, newBlock.VotedAddresses...)
 
+		skipVoting:
 			if float64(blockCandidate.Votes) >= requiredVotes {
 				err, _ = s.Storage.Put(blockchainCol, blockCandidate, storageToken)
 				if err != nil {

@@ -269,11 +269,11 @@ func (s *InternalService) Processing() {
 					goto startLoop
 				}
 
-				if newBlock.IsBroadcasted {
-					goto startLoop
-				}
+				// if newBlock.IsBroadcasted {
+				// 	goto startLoop
+				// }
 
-				newBlock.IsBroadcasted = true
+				// newBlock.IsBroadcasted = true
 
 				err = s.broadcastMsg(newBlock, saiP2Paddress)
 				if err != nil {
@@ -547,6 +547,7 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 	newBlock.Votes = +1
 	newBlock.Block.SenderSignature = btcResp.Signature
 	newBlock.Signatures = append(newBlock.Signatures, btcResp.Signature)
+	newBlock.VotedAddresses = append(newBlock.VotedAddresses, s.BTCkeys.Address)
 
 	for _, tx := range txMsgs {
 		err, _ := s.Storage.Update(MessagesPoolCol, bson.M{"executed_hash": tx.ExecutedHash}, bson.M{"block_hash": newBlock.BlockHash, "block_number": newBlock.Block.Number}, storageToken)
@@ -590,6 +591,7 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 			s.GlobalService.Logger.Debug("found block candidate with formed block hash", zap.String("hash", newBlock.BlockHash))
 			blockCandidate.Votes = newBlock.Votes + blockCandidate.Votes
 			blockCandidate.Signatures = append(blockCandidate.Signatures, newBlock.Signatures...)
+			blockCandidate.VotedAddresses = append(blockCandidate.VotedAddresses, newBlock.VotedAddresses...)
 
 			if float64(blockCandidate.Votes) >= requiredVotes {
 				err, _ = s.Storage.Put(blockchainCol, blockCandidate, storageToken)

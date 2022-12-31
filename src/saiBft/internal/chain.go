@@ -257,7 +257,7 @@ func (s *InternalService) handleBlockConsensusMsg(saiBTCaddress, saiP2pProxyAddr
 	}
 
 	block := blocks[0]
-	s.GlobalService.Logger.Debug("chain - handleBlockConsensus - block candidate found", zap.Int("block_number", block.Block.Number), zap.String("block_hash", block.BlockHash), zap.Int("votes", block.Votes))
+	s.GlobalService.Logger.Debug("chain - handleBlockConsensus - block found", zap.Int("block_number", block.Block.Number), zap.String("block_hash", block.BlockHash), zap.Int("votes", block.Votes))
 
 	if block.BlockHash == msg.BlockHash {
 		err := s.addVotesToBlock(&block, msg, storageToken)
@@ -317,9 +317,10 @@ func (s *InternalService) getBlockCandidate(blockHash string, storageToken strin
 // add vote to block N
 func (s *InternalService) addVotesToBlock(block, msg *models.BlockConsensusMessage, storageToken string) error {
 	block.Signatures = append(block.Signatures, msg.Block.SenderSignature)
+	block.VotedAddresses = append(block.VotedAddresses, msg.VotedAddresses...)
 	block.Votes++
 	filter := bson.M{"block.number": block.Block.Number}
-	update := bson.M{"votes": block.Votes, "voted_signatures": block.Signatures}
+	update := bson.M{"votes": block.Votes, "voted_signatures": block.Signatures, "voted_addresses": block.VotedAddresses}
 	err, _ := s.Storage.Update(blockchainCol, filter, update, storageToken)
 	return err
 }

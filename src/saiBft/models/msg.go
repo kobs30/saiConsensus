@@ -57,14 +57,15 @@ func (m *ConsensusMessage) GetHash() (string, error) {
 
 // BlockConsensus message
 type BlockConsensusMessage struct {
-	Type          string   `json:"type" valid:",required"`
-	BlockHash     string   `json:"block_hash" valid:",required"`
-	Votes         int      `json:"votes"` // additional field, which was not added by Valeriy
-	Block         *Block   `json:"block" valid:",required"`
-	Count         int      `json:"-"` // extended value for consensus while get missed blocks from p2p services
-	Signatures    []string `json:"voted_signatures"`
-	BaseRND       int64    `json:"base_rnd"`
-	IsBroadcasted bool     `json:"is_broadcasted"`
+	Type           string   `json:"type" valid:",required"`
+	BlockHash      string   `json:"block_hash" valid:",required"`
+	Votes          int      `json:"votes"` // additional field, which was not added by Valeriy
+	Block          *Block   `json:"block" valid:",required"`
+	Count          int      `json:"-"` // extended value for consensus while get missed blocks from p2p services
+	Signatures     []string `json:"voted_signatures"`
+	VotedAddresses []string `json:"voted_addresses"`
+	BaseRND        int64    `json:"base_rnd"`
+	//IsBroadcasted  bool     `json:"is_broadcasted"`
 }
 
 type Block struct {

@@ -260,7 +260,7 @@ func (s *InternalService) handleBlockConsensusMsg(saiBTCaddress, saiP2pProxyAddr
 	s.GlobalService.Logger.Debug("chain - handleBlockConsensus - block found", zap.Int("block_number", block.Block.Number), zap.String("block_hash", block.BlockHash), zap.Int("votes", block.Votes))
 
 	if block.BlockHash == msg.BlockHash {
-		for _, addr := range msg.VotedAddresses { // check if block was already voted by this address
+		for _, addr := range block.VotedAddresses { // check if block was already voted by this address
 			if addr == s.BTCkeys.Address {
 				return nil
 			}

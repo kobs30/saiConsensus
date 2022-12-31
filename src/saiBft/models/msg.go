@@ -65,7 +65,7 @@ type BlockConsensusMessage struct {
 	Signatures     []string `json:"voted_signatures"`
 	VotedAddresses []string `json:"voted_addresses"`
 	BaseRND        int64    `json:"base_rnd"`
-	//IsBroadcasted  bool     `json:"is_broadcasted"`
+	IsBroadcasted  bool     `json:"is_broadcasted"`
 }
 
 type Block struct {

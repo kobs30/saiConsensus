@@ -259,32 +259,46 @@ func (s *InternalService) handleBlockConsensusMsg(saiBTCaddress, saiP2pProxyAddr
 	s.GlobalService.Logger.Debug("chain - handle block consensus - got block from blockchain with such hash", zap.Int("block_number", block.Block.Number), zap.Int("votes", block.Votes), zap.String("hash", block.BlockHash), zap.Strings("addresses", block.VotedAddresses))
 
 	if block.BlockHash == msg.BlockHash {
-		uniqueAddresses := utils.UniqueStrings(block.VotedAddresses, msg.VotedAddresses)
-		uniqueSignatures := make([]string, 0)
+		addrMap := make(map[string]int)
+
+		for _, addr := range msg.VotedAddresses {
+			addrMap[addr]++
+		}
+
+		for _, blockAddr := range block.VotedAddresses {
+			addrMap[blockAddr]--
+		}
+
+		addrToAdd := make([]string, 0)
+		for k, v := range addrMap {
+			if v == 1 {
+				addrToAdd = append(addrToAdd, k)
+			}
+		}
+
+		if len(addrToAdd) == 0 {
+			s.GlobalService.Logger.Debug("chain - handleBlockConsensusMsg - unique addreses not found")
+			return nil
+		}
 
 		indexes := make([]int, 0)
-
-		for vi, a := range msg.VotedAddresses {
-			for _, addr := range uniqueAddresses {
-				if a == addr {
-					indexes = append(indexes, vi)
+		for i, msgAddr := range msg.VotedAddresses {
+			for _, addr := range addrToAdd {
+				if msgAddr == addr {
+					indexes = append(indexes, i)
 				}
 			}
 		}
 
-		s.GlobalService.Logger.Debug("chain - handleBlockConsensusMsg - indexes", zap.Ints("indexes", indexes), zap.Strings("unique addresses", uniqueAddresses), zap.Strings("msg addresses", msg.VotedAddresses))
+		s.GlobalService.Logger.Debug("chain - handleBlockConsensusMsg - indexes", zap.Ints("indexes", indexes), zap.Strings("unique addresses", addrToAdd), zap.Strings("msg addresses", msg.VotedAddresses))
 
-		if len(indexes) == 0 || len(uniqueAddresses) == 0 {
-			s.GlobalService.Logger.Debug("chain - handleBlockConsensusMsg - nothing unique")
-			return nil
-		} else {
-			for _, v := range indexes {
-				uniqueSignatures = append(uniqueSignatures, msg.Signatures[v])
-			}
+		uniqueSignatures := make([]string, 0)
+		for _, v := range indexes {
+			uniqueSignatures = append(uniqueSignatures, msg.Signatures[v])
 		}
 
-		block.Votes = block.Votes + len(uniqueAddresses)
-		block.VotedAddresses = append(block.VotedAddresses, uniqueAddresses...)
+		block.Votes = block.Votes + len(addrToAdd)
+		block.VotedAddresses = append(block.VotedAddresses, addrToAdd...)
 		block.Signatures = append(block.Signatures, uniqueSignatures...)
 
 		s.GlobalService.Logger.Debug("chain - handle block consensus - msg.Hash==block.Hash = block after updating", zap.Int("block_number", block.Block.Number), zap.Int("votes", block.Votes), zap.String("hash", block.BlockHash), zap.Strings("addresses", block.VotedAddresses))

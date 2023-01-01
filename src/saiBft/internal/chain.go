@@ -260,15 +260,27 @@ func (s *InternalService) handleBlockConsensusMsg(saiBTCaddress, saiP2pProxyAddr
 
 	if block.BlockHash == msg.BlockHash {
 		uniqueAddresses := utils.UniqueStrings(block.VotedAddresses, msg.VotedAddresses)
-		uniqueSignatures := utils.UniqueStrings(block.Signatures, msg.Signatures)
+		uniqueSignatures := make([]string, 0)
 
-		if len(uniqueAddresses) != len(uniqueSignatures) {
-			s.GlobalService.Logger.Error("chain - handleBlockConsensusMsg - blockHash = msgBlockHash - wrong count of unique addresses/signatures", zap.Error(err))
+		indexes := make([]int, 0)
 
+		for vi, a := range msg.VotedAddresses {
+			for _, addr := range uniqueAddresses {
+				if a == addr {
+					indexes = append(indexes, vi)
+				}
+			}
 		}
 
-		if len(uniqueAddresses) == 0 { //nothing to add
-			s.GlobalService.Logger.Debug("chain - handleBlockConsensus - no unique addresses found", zap.Int("block_number", block.Block.Number), zap.String("block_hash", block.BlockHash), zap.Int("votes", block.Votes))
+		s.GlobalService.Logger.Debug("chain - handleBlockConsensusMsg - indexes", zap.Ints("indexes", indexes), zap.Strings("unique addresses", uniqueAddresses), zap.Strings("msg addresses", msg.VotedAddresses))
+
+		if len(indexes) == 0 || len(uniqueAddresses) == 0 {
+			s.GlobalService.Logger.Debug("chain - handleBlockConsensusMsg - nothing unique")
+			return nil
+		} else {
+			for _, v := range indexes {
+				uniqueSignatures = append(uniqueSignatures, msg.Signatures[v])
+			}
 		}
 
 		block.Votes = block.Votes + len(uniqueAddresses)
@@ -361,6 +373,8 @@ func (s *InternalService) updateBlockchain(msg *models.BlockConsensusMessage, st
 // 1. Get block candidate from db
 //2. update blockchain if blockCandidate votes < incoming msg.Votes
 func (s *InternalService) handleBlockCandidate(msg *models.BlockConsensusMessage, saiP2pProxyAddress, saiP2pAddress, storageToken string) error {
+	requiredVotes := math.Ceil(float64(len(s.Validators)) * 7 / 10)
+
 	blockCandidate, err := s.getBlockCandidate(msg.BlockHash, storageToken)
 	if err != nil {
 		s.GlobalService.Logger.Error("handleBlockConsensusMsg - blockHash != msgBlockHash - get block candidate by msg block hash", zap.Error(err))
@@ -368,12 +382,21 @@ func (s *InternalService) handleBlockCandidate(msg *models.BlockConsensusMessage
 	}
 
 	if blockCandidate == nil {
-		err, _ := s.Storage.Put("BlockCandidates", msg, storageToken)
-		if err != nil {
-			s.GlobalService.Logger.Error("handleBlockConsensusMsg - blockHash = msgBlockHash - insert block to BlockCandidates collection", zap.Error(err))
-			return err
+		if float64(msg.Votes) >= requiredVotes {
+			err, _ := s.Storage.Put(blockchainCol, msg, storageToken)
+			if err != nil {
+				s.GlobalService.Logger.Error("handleBlockConsensusMsg - blockHash = msgBlockHash - insert block to BlockCandidates collection", zap.Error(err))
+				return err
+			}
+			return nil
+		} else {
+			err, _ := s.Storage.Put(BlockCandidatesCol, msg, storageToken)
+			if err != nil {
+				s.GlobalService.Logger.Error("handleBlockConsensusMsg - blockHash = msgBlockHash - insert block to BlockChain collection", zap.Error(err))
+				return err
+			}
+			return nil
 		}
-		return nil
 	}
 
 	for _, addr := range blockCandidate.VotedAddresses { // check if block was already voted by this address
@@ -390,7 +413,6 @@ func (s *InternalService) handleBlockCandidate(msg *models.BlockConsensusMessage
 
 	s.GlobalService.Logger.Debug("chain - handleBlockConsensus - handleBlockCandidate - candidate after voting", zap.Int("block_number", blockCandidate.Block.Number), zap.String("block_hash", blockCandidate.BlockHash), zap.Int("votes", blockCandidate.Votes), zap.Strings("addresses", blockCandidate.VotedAddresses))
 
-	requiredVotes := math.Ceil(float64(len(s.Validators)) * 7 / 10)
 	if float64(blockCandidate.Votes) >= requiredVotes {
 		s.GlobalService.Logger.Debug("chain - handle block consensus - handle - block candidate - sync block")
 		err, _ := s.Storage.Put(blockchainCol, blockCandidate, storageToken)

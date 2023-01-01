@@ -188,7 +188,6 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 					Service.GlobalService.Logger.Error("listenFromSaiP2P - initial block consensus msg - update blockchain", zap.Error(err))
 					continue
 				}
-
 				continue
 			}
 
@@ -257,15 +256,28 @@ func (s *InternalService) handleBlockConsensusMsg(saiBTCaddress, saiP2pProxyAddr
 	}
 
 	block := blocks[0]
-	s.GlobalService.Logger.Debug("chain - handle block consensus - got block from blockchain with such hash", zap.Int("block_number", msg.Block.Number), zap.Int("votes", msg.Votes), zap.String("hash", msg.BlockHash), zap.Strings("addresses", msg.VotedAddresses))
+	s.GlobalService.Logger.Debug("chain - handle block consensus - got block from blockchain with such hash", zap.Int("block_number", block.Block.Number), zap.Int("votes", block.Votes), zap.String("hash", block.BlockHash), zap.Strings("addresses", block.VotedAddresses))
 
 	if block.BlockHash == msg.BlockHash {
-		for _, addr := range block.VotedAddresses { // check if block was already voted by this address
-			if addr == s.BTCkeys.Address {
-				return nil
-			}
+		uniqueAddresses := utils.UniqueStrings(block.VotedAddresses, msg.VotedAddresses)
+		uniqueSignatures := utils.UniqueStrings(block.Signatures, msg.Signatures)
+
+		if len(uniqueAddresses) != len(uniqueSignatures) {
+			s.GlobalService.Logger.Error("chain - handleBlockConsensusMsg - blockHash = msgBlockHash - wrong count of unique addresses/signatures", zap.Error(err))
+
 		}
-		err := s.addVotesToBlock(&block, msg, storageToken)
+
+		if len(uniqueAddresses) == 0 { //nothing to add
+			s.GlobalService.Logger.Debug("chain - handleBlockConsensus - no unique addresses found", zap.Int("block_number", block.Block.Number), zap.String("block_hash", block.BlockHash), zap.Int("votes", block.Votes))
+		}
+
+		block.Votes = block.Votes + len(uniqueAddresses)
+		block.VotedAddresses = append(block.VotedAddresses, uniqueAddresses...)
+		block.Signatures = append(block.Signatures, uniqueSignatures...)
+
+		s.GlobalService.Logger.Debug("chain - handle block consensus - msg.Hash==block.Hash = block after updating", zap.Int("block_number", block.Block.Number), zap.Int("votes", block.Votes), zap.String("hash", block.BlockHash), zap.Strings("addresses", block.VotedAddresses))
+
+		err := s.addVotesToBlock(&block, storageToken)
 		if err != nil {
 			s.GlobalService.Logger.Error("handleBlockConsensusMsg - blockHash = msgBlockHash - add votes to block", zap.Error(err))
 			return err
@@ -319,10 +331,7 @@ func (s *InternalService) getBlockCandidate(blockHash string, storageToken strin
 }
 
 // add vote to block N
-func (s *InternalService) addVotesToBlock(block, msg *models.BlockConsensusMessage, storageToken string) error {
-	block.Signatures = append(block.Signatures, msg.Block.SenderSignature)
-	block.VotedAddresses = append(block.VotedAddresses, msg.VotedAddresses...)
-	block.Votes++
+func (s *InternalService) addVotesToBlock(block *models.BlockConsensusMessage, storageToken string) error {
 	filter := bson.M{"block.number": block.Block.Number}
 	update := bson.M{"votes": block.Votes, "voted_signatures": block.Signatures, "voted_addresses": block.VotedAddresses}
 	err, _ := s.Storage.Update(blockchainCol, filter, update, storageToken)
@@ -384,13 +393,13 @@ func (s *InternalService) handleBlockCandidate(msg *models.BlockConsensusMessage
 	requiredVotes := math.Ceil(float64(len(s.Validators)) * 7 / 10)
 	if float64(blockCandidate.Votes) >= requiredVotes {
 		s.GlobalService.Logger.Debug("chain - handle block consensus - handle - block candidate - sync block")
-		err, _ := s.Storage.Put("Blockchain", blockCandidate, storageToken)
+		err, _ := s.Storage.Put(blockchainCol, blockCandidate, storageToken)
 		if err != nil {
 			s.GlobalService.Logger.Error("handleBlockConsensusMsg - blockHash = msgBlockHash - insert block to BlockCandidates collection", zap.Error(err))
 			return err
 		}
 
-		s.GlobalService.Logger.Sugar().Debugf("block candidate was inserted to blockchain collection, blockCandidate : %+v\n", msg) // DEBUG
+		s.GlobalService.Logger.Sugar().Debugf("block candidate was inserted to blockchain collection, blockCandidate : %+v\n", blockCandidate) // DEBUG
 
 		err = s.updateBlockchain(blockCandidate, saiP2pProxyAddress, storageToken, saiP2pAddress)
 		if err != nil {

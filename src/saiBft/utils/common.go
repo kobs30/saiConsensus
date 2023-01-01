@@ -57,3 +57,23 @@ func GetOutboundIP() string {
 
 	return ip.Query
 }
+
+func UniqueStrings(slice ...[]string) []string {
+	uniqueMap := map[string]bool{}
+
+	for _, intSlice := range slice {
+		for _, s := range intSlice {
+			uniqueMap[s] = true
+		}
+	}
+
+	// Create a slice with the capacity of unique items
+	// This capacity make appending flow much more efficient
+	result := make([]string, 0, len(uniqueMap))
+
+	for key := range uniqueMap {
+		result = append(result, key)
+	}
+
+	return result
+}

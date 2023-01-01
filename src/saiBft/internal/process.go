@@ -269,22 +269,22 @@ func (s *InternalService) Processing() {
 					goto startLoop
 				}
 
-				if newBlock.IsBroadcasted {
-					goto startLoop
-				}
+				// if newBlock.IsBroadcasted {
+				// 	goto startLoop
+				// }
 
-				newBlock.IsBroadcasted = true
+				// newBlock.IsBroadcasted = true
 
 				err = s.broadcastMsg(newBlock, saiP2Paddress)
 				if err != nil {
 					goto startLoop
 				}
 
-				err, _ = s.Storage.Update(blockchainCol, bson.M{"block_hash": newBlock.BlockHash}, bson.M{"is_broadcasted": true}, storageToken)
-				if err != nil {
-					s.GlobalService.Logger.Error("process -  round = 7 - set is_broadcasted to true when broadcast block", zap.Error(err))
+				// err, _ = s.Storage.Update(blockchainCol, bson.M{"block_hash": newBlock.BlockHash}, bson.M{"is_broadcasted": true}, storageToken)
+				// if err != nil {
+				// 	s.GlobalService.Logger.Error("process -  round = 7 - set is_broadcasted to true when broadcast block", zap.Error(err))
 
-				}
+				// }
 				goto startLoop
 			}
 		}
@@ -563,6 +563,8 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 		newBlock.Block.Messages[tx.ExecutedHash] = tx
 	}
 
+	s.GlobalService.Logger.Debug("process - formAndSaveNewBlock - formed block before count votes", zap.Int("block_number", newBlock.Block.Number), zap.Int("votes", newBlock.Votes), zap.String("hash", newBlock.BlockHash), zap.Strings("addresses", newBlock.VotedAddresses))
+
 	requiredVotes := math.Ceil(float64(len(s.Validators)) * 7 / 10)
 
 	if float64(newBlock.Votes) >= requiredVotes {
@@ -571,6 +573,8 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 			s.GlobalService.Logger.Error("handleBlockConsensusMsg - blockHash = msgBlockHash - insert block to BlockCandidates collection", zap.Error(err))
 			return nil, err
 		}
+		s.GlobalService.Logger.Debug("process - formAndSaveNewBlock - put to blockchain", zap.Int("block_number", newBlock.Block.Number), zap.Int("votes", newBlock.Votes), zap.String("hash", newBlock.BlockHash), zap.Strings("addresses", newBlock.VotedAddresses))
+
 	} else {
 		// check if we have already such block candidate
 		blockCandidate, err := s.getBlockCandidate(newBlock.BlockHash, storageToken)
@@ -581,14 +585,15 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 
 		// if there is no such blockCandidate, save block to BlockCandidate collection
 		if blockCandidate == nil {
-			s.GlobalService.Logger.Debug("process - from new block - blockcandidate not found")
 			err, _ := s.Storage.Put(BlockCandidatesCol, newBlock, storageToken)
 			if err != nil {
 				s.GlobalService.Logger.Error("process - round == 7 - form and save new block - put to BlockCandidate collection", zap.Error(err))
 				return nil, err
 			}
+			s.GlobalService.Logger.Debug("process - formAndSaveNewBlock - put to candidates", zap.Int("block_number", newBlock.Block.Number), zap.Int("votes", newBlock.Votes), zap.String("hash", newBlock.BlockHash), zap.Strings("addresses", newBlock.VotedAddresses))
 		} else { // else, add vote and signature and save to blockchain
-			s.GlobalService.Logger.Debug("found block candidate with formed block hash", zap.String("hash", newBlock.BlockHash))
+
+			s.GlobalService.Logger.Debug("process - formAndSaveNewBlock - found candidates with hash", zap.Int("block_number", blockCandidate.Block.Number), zap.Int("votes", blockCandidate.Votes), zap.String("hash", blockCandidate.BlockHash), zap.Strings("addresses", blockCandidate.VotedAddresses))
 
 			for _, addr := range blockCandidate.VotedAddresses { // check if block was already voted by this address
 				if addr == s.BTCkeys.Address {
@@ -599,6 +604,7 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 			blockCandidate.Votes = newBlock.Votes + blockCandidate.Votes
 			blockCandidate.Signatures = append(blockCandidate.Signatures, newBlock.Signatures...)
 			blockCandidate.VotedAddresses = append(blockCandidate.VotedAddresses, newBlock.VotedAddresses...)
+			s.GlobalService.Logger.Debug("process - formAndSaveNewBlock - blockCandidate after voting", zap.Int("block_number", blockCandidate.Block.Number), zap.Int("votes", blockCandidate.Votes), zap.String("hash", blockCandidate.BlockHash), zap.Strings("addresses", blockCandidate.VotedAddresses))
 
 		skipVoting:
 			if float64(blockCandidate.Votes) >= requiredVotes {

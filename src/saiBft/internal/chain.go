@@ -40,7 +40,7 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 
 	for {
 		data := <-s.MsgQueue
-		s.GlobalService.Logger.Debug("chain - got data", zap.Any("data", data)) // DEBUG
+		//s.GlobalService.Logger.Debug("chain - got data", zap.Any("data", data)) // DEBUG
 		switch data.(type) {
 		case *models.Tx:
 			// skip if state is not initialized
@@ -229,7 +229,7 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 
 // handle BlockConsensusMsg
 func (s *InternalService) handleBlockConsensusMsg(saiBTCaddress, saiP2pProxyAddress, storageToken string, msg *models.BlockConsensusMessage, saiP2pAddress string) error {
-	s.GlobalService.Logger.Debug("chain - handleBlockConsensus", zap.Int("block_number", msg.Block.Number), zap.String("block_hash", msg.BlockHash), zap.Int("votes", msg.Votes))
+	s.GlobalService.Logger.Debug("chain - handle block consensus - incoming block", zap.Int("block_number", msg.Block.Number), zap.Int("votes", msg.Votes), zap.String("hash", msg.BlockHash), zap.Strings("addresses", msg.VotedAddresses))
 	// Get Block N
 	err, result := s.Storage.Get(blockchainCol, bson.M{"block.number": msg.Block.Number}, bson.M{}, storageToken)
 	if err != nil {
@@ -239,7 +239,7 @@ func (s *InternalService) handleBlockConsensusMsg(saiBTCaddress, saiP2pProxyAddr
 
 	// if there is no such block - go futher (compare block hash)
 	if len(result) == 2 {
-		s.GlobalService.Logger.Debug("chain - handleBlockConsensus - len == 2", zap.Int("block_number", msg.Block.Number), zap.String("block_hash", msg.BlockHash), zap.Int("votes", msg.Votes))
+		s.GlobalService.Logger.Debug("chain - handle block consensus - no block found in blockchain", zap.Int("block_number", msg.Block.Number), zap.Int("votes", msg.Votes), zap.String("hash", msg.BlockHash), zap.Strings("addresses", msg.VotedAddresses))
 		return s.handleBlockCandidate(msg, saiP2pProxyAddress, saiP2pAddress, storageToken)
 	}
 
@@ -257,7 +257,7 @@ func (s *InternalService) handleBlockConsensusMsg(saiBTCaddress, saiP2pProxyAddr
 	}
 
 	block := blocks[0]
-	s.GlobalService.Logger.Debug("chain - handleBlockConsensus - block found", zap.Int("block_number", block.Block.Number), zap.String("block_hash", block.BlockHash), zap.Int("votes", block.Votes))
+	s.GlobalService.Logger.Debug("chain - handle block consensus - got block from blockchain with such hash", zap.Int("block_number", msg.Block.Number), zap.Int("votes", msg.Votes), zap.String("hash", msg.BlockHash), zap.Strings("addresses", msg.VotedAddresses))
 
 	if block.BlockHash == msg.BlockHash {
 		for _, addr := range block.VotedAddresses { // check if block was already voted by this address
@@ -315,7 +315,6 @@ func (s *InternalService) getBlockCandidate(blockHash string, storageToken strin
 	}
 
 	blockCandidate := blockCandidates[0]
-	s.GlobalService.Logger.Sugar().Debugf("got block candidate : %+v\n", blockCandidate) //DEBUG
 	return &blockCandidate, nil
 }
 
@@ -368,16 +367,19 @@ func (s *InternalService) handleBlockCandidate(msg *models.BlockConsensusMessage
 		return nil
 	}
 
-	for _, addr := range msg.VotedAddresses { // check if block was already voted by this address
+	for _, addr := range blockCandidate.VotedAddresses { // check if block was already voted by this address
 		if addr == s.BTCkeys.Address {
 			return nil
 		}
 	}
 
-	s.GlobalService.Logger.Debug("chain - handleBlockConsensus - handleBlockCandidate - found candidate", zap.Int("block_number", blockCandidate.Block.Number), zap.String("block_hash", blockCandidate.BlockHash), zap.Int("votes", blockCandidate.Votes), zap.Strings("signatures", blockCandidate.Signatures))
+	s.GlobalService.Logger.Debug("chain - handleBlockConsensus - handleBlockCandidate - found candidate", zap.Int("block_number", blockCandidate.Block.Number), zap.String("block_hash", blockCandidate.BlockHash), zap.Int("votes", blockCandidate.Votes), zap.Strings("addresses", blockCandidate.VotedAddresses))
 
 	blockCandidate.Votes++
 	blockCandidate.Signatures = append(blockCandidate.Signatures, msg.Block.SenderSignature)
+	blockCandidate.VotedAddresses = append(blockCandidate.VotedAddresses, msg.VotedAddresses...)
+
+	s.GlobalService.Logger.Debug("chain - handleBlockConsensus - handleBlockCandidate - candidate after voting", zap.Int("block_number", blockCandidate.Block.Number), zap.String("block_hash", blockCandidate.BlockHash), zap.Int("votes", blockCandidate.Votes), zap.Strings("addresses", blockCandidate.VotedAddresses))
 
 	requiredVotes := math.Ceil(float64(len(s.Validators)) * 7 / 10)
 	if float64(blockCandidate.Votes) >= requiredVotes {

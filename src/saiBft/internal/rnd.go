@@ -162,6 +162,21 @@ getRndForSpecifiedRoundAndBlock:
 				}
 			}
 
+			hash, err := rndMsg.GetHash()
+			if err != nil {
+				s.GlobalService.Logger.Error("process - rnd processing - get hash", zap.Error(err))
+				return nil, err
+			}
+			rndMsg.RND.Hash = hash
+
+			resp, err := utils.SignMessage(rndMsg, saiBTCAddress, s.BTCkeys.Private)
+			if err != nil {
+				s.GlobalService.Logger.Error("process - rnd processing - sign message", zap.Error(err))
+				return nil, err
+			}
+
+			rndMsg.RND.SenderSignature = resp.Signature
+
 			err = s.broadcastMsg(msg, saiP2pAddress)
 			if err != nil {
 				s.GlobalService.Logger.Error("processing - rnd processing - broadcast msg", zap.Error(err))

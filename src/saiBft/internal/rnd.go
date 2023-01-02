@@ -106,7 +106,7 @@ getRndForSpecifiedRoundAndBlock:
 	s.GlobalService.Logger.Debug("process - rnd processing -  new round", zap.Int("round", rndRound))
 
 	// get rnd messages for the round and for block
-	err, result = s.Storage.Get(RndMessagesPoolCol, bson.M{"message.block_number": blockNumber, "message.round": rndRound}, bson.M{}, storageToken)
+	err, result = s.Storage.Get(RndMessagesPoolCol, bson.M{"message.block_number": blockNumber}, bson.M{}, storageToken)
 	if err != nil {
 		s.GlobalService.Logger.Error("processing - rnd processing - get rnd for specified round/block", zap.Error(err))
 		return nil, err
@@ -131,6 +131,9 @@ getRndForSpecifiedRoundAndBlock:
 
 		// filter messages which is not from validator list
 		for _, msg := range rndMsgs {
+			if msg.RND.SenderAddress == s.BTCkeys.Address { //do not vote for own message
+				continue
+			}
 			for _, validator := range s.Validators {
 				if validator == msg.RND.SenderAddress {
 					filteredRndMsgs = append(filteredRndMsgs, msg)

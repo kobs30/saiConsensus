@@ -155,28 +155,28 @@ getRndForSpecifiedRoundAndBlock:
 				}
 			} else {
 				msg.RND.Rnd += rnd
+
+				hash, err := msg.GetHash()
+				if err != nil {
+					s.GlobalService.Logger.Error("process - rnd processing - get hash", zap.Error(err))
+					return nil, err
+				}
+				msg.RND.Hash = hash
+
+				resp, err := utils.SignMessage(msg, saiBTCAddress, s.BTCkeys.Private)
+				if err != nil {
+					s.GlobalService.Logger.Error("process - rnd processing - sign message", zap.Error(err))
+					return nil, err
+				}
+
+				msg.RND.SenderSignature = resp.Signature
+
 				err, _ = s.Storage.Put(RndMessagesPoolCol, msg, storageToken)
 				if err != nil {
 					s.GlobalService.Logger.Error("process - rnd processing - put to db", zap.Error(err))
 					return nil, err
 				}
 			}
-
-			hash, err := msg.GetHash()
-			if err != nil {
-				s.GlobalService.Logger.Error("process - rnd processing - get hash", zap.Error(err))
-				return nil, err
-			}
-			msg.RND.Hash = hash
-
-			resp, err := utils.SignMessage(msg, saiBTCAddress, s.BTCkeys.Private)
-			if err != nil {
-				s.GlobalService.Logger.Error("process - rnd processing - sign message", zap.Error(err))
-				return nil, err
-			}
-
-			msg.RND.SenderSignature = resp.Signature
-
 			err = s.broadcastMsg(msg, saiP2pAddress)
 			if err != nil {
 				s.GlobalService.Logger.Error("processing - rnd processing - broadcast msg", zap.Error(err))

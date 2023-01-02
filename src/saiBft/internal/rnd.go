@@ -151,7 +151,7 @@ getRndForSpecifiedRoundAndBlock:
 					return nil, err
 				}
 			} else {
-				rnd += msg.RND.Rnd
+				msg.RND.Rnd += rnd
 				err, _ = s.Storage.Put(RndMessagesPoolCol, msg, storageToken)
 				if err != nil {
 					s.GlobalService.Logger.Error("process - rnd processing - put to db", zap.Error(err))

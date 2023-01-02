@@ -106,7 +106,7 @@ getRndForSpecifiedRoundAndBlock:
 	s.GlobalService.Logger.Debug("process - rnd processing -  new round", zap.Int("round", rndRound))
 
 	// get rnd messages for the round and for block
-	err, result = s.Storage.Get(RndMessagesPoolCol, bson.M{"message.block_number": blockNumber}, bson.M{}, storageToken)
+	err, result = s.Storage.Get(RndMessagesPoolCol, bson.M{"message.block_number": blockNumber, "message.round": rndRound}, bson.M{}, storageToken)
 	if err != nil {
 		s.GlobalService.Logger.Error("processing - rnd processing - get rnd for specified round/block", zap.Error(err))
 		return nil, err

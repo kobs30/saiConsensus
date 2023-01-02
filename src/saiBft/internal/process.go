@@ -604,6 +604,7 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 			blockCandidate.Votes = newBlock.Votes + blockCandidate.Votes
 			blockCandidate.Signatures = append(blockCandidate.Signatures, newBlock.Signatures...)
 			blockCandidate.VotedAddresses = append(blockCandidate.VotedAddresses, newBlock.VotedAddresses...)
+			blockCandidate.Block.Messages = newBlock.Block.Messages
 			s.GlobalService.Logger.Debug("process - formAndSaveNewBlock - blockCandidate after voting", zap.Int("block_number", blockCandidate.Block.Number), zap.Int("votes", blockCandidate.Votes), zap.String("hash", blockCandidate.BlockHash), zap.Strings("addresses", blockCandidate.VotedAddresses))
 
 		skipVoting:

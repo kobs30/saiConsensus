@@ -261,6 +261,11 @@ func (s *InternalService) handleBlockConsensusMsg(saiBTCaddress, saiP2pProxyAddr
 	if block.BlockHash == msg.BlockHash {
 		block := s.getFilteredBlockConsensus(msg, &block)
 
+		if block == nil {
+			s.GlobalService.Logger.Debug("chain - handleBlockConsensus - filteredBlock is null")
+			return nil
+		}
+
 		s.GlobalService.Logger.Debug("chain - handle block consensus - msg.Hash==block.Hash = block after updating", zap.Int("block_number", block.Block.Number), zap.Int("votes", block.Votes), zap.String("hash", block.BlockHash), zap.Strings("addresses", block.VotedAddresses))
 
 		err := s.addVotesToBlock(block, storageToken)
@@ -374,6 +379,11 @@ func (s *InternalService) handleBlockCandidate(msg *models.BlockConsensusMessage
 	}
 
 	blockCandidate = s.getFilteredBlockConsensus(msg, blockCandidate)
+
+	if blockCandidate == nil {
+		s.GlobalService.Logger.Debug("chain - handleBlockConsensus - filteredBlock is null")
+		return nil
+	}
 
 	s.GlobalService.Logger.Debug("chain - handleBlockConsensus - handleBlockCandidate - candidate after voting", zap.Int("block_number", blockCandidate.Block.Number), zap.String("block_hash", blockCandidate.BlockHash), zap.Int("votes", blockCandidate.Votes), zap.Strings("addresses", blockCandidate.VotedAddresses))
 

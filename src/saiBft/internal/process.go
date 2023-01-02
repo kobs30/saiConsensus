@@ -567,7 +567,7 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 
 	requiredVotes := math.Ceil(float64(len(s.Validators)) * 7 / 10)
 
-	if float64(newBlock.Votes) >= requiredVotes {
+	if float64(newBlock.Votes) >= requiredVotes { // if new block already have enough votes to be in blockchain
 		err, _ := s.Storage.Put(blockchainCol, newBlock, storageToken)
 		if err != nil {
 			s.GlobalService.Logger.Error("handleBlockConsensusMsg - blockHash = msgBlockHash - insert block to BlockCandidates collection", zap.Error(err))

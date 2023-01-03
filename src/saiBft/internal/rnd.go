@@ -171,7 +171,7 @@ getRndForSpecifiedRoundAndBlock:
 					s.GlobalService.Logger.Error("process - rnd processing - get hash", zap.Error(err))
 					return nil, err
 				}
-				msg.RND.Hash = hash
+				newRndMsg.RND.Hash = hash
 
 				resp, err := utils.SignMessage(newRndMsg, saiBTCAddress, s.BTCkeys.Private)
 				if err != nil {

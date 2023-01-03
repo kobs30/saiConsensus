@@ -144,8 +144,6 @@ getRndForSpecifiedRoundAndBlock:
 		//s.GlobalService.Logger.Debug("process - rnd processing - rnd msgs after filtration", zap.Any("filtered msgs", filteredRndMsgs))
 
 		for _, msg := range filteredRndMsgs {
-			s.GlobalService.Logger.Sugar().Debugf("ROUND : %d", rndRound)
-			s.GlobalService.Logger.Sugar().Debugf("HANDLING MSG : %+v", msg.RND)
 			if msg.RND.Rnd == rnd {
 				msg.Votes++
 				criteria := bson.M{"message.hash": msg.RND.Hash}
@@ -156,31 +154,40 @@ getRndForSpecifiedRoundAndBlock:
 					return nil, err
 				}
 			} else {
-				s.GlobalService.Logger.Sugar().Debugf("OLD MSG : %+v", msg.RND)
-				msg.RND.Rnd = msg.RND.Rnd + rnd
+				newRndMsg := &models.RNDMessage{
+					Votes: msg.Votes,
+					Type:  models.RNDMessageType,
+					RND: &models.RND{
+						SenderAddress: msg.RND.SenderAddress,
+						BlockNumber:   msg.RND.BlockNumber,
+						Round:         rndRound,
+						Rnd:           msg.RND.Rnd + rnd,
+						TxMsgHashes:   msg.RND.TxMsgHashes,
+					},
+				}
 
-				hash, err := msg.GetHash()
+				hash, err := newRndMsg.GetHash()
 				if err != nil {
 					s.GlobalService.Logger.Error("process - rnd processing - get hash", zap.Error(err))
 					return nil, err
 				}
 				msg.RND.Hash = hash
 
-				resp, err := utils.SignMessage(msg, saiBTCAddress, s.BTCkeys.Private)
+				resp, err := utils.SignMessage(newRndMsg, saiBTCAddress, s.BTCkeys.Private)
 				if err != nil {
 					s.GlobalService.Logger.Error("process - rnd processing - sign message", zap.Error(err))
 					return nil, err
 				}
 
-				msg.RND.SenderSignature = resp.Signature
+				newRndMsg.RND.SenderSignature = resp.Signature
 
-				s.GlobalService.Logger.Sugar().Debugf("NEW MSG : %+v", msg.RND)
-
-				err, _ = s.Storage.Put(RndMessagesPoolCol, msg, storageToken)
+				err, _ = s.Storage.Put(RndMessagesPoolCol, newRndMsg, storageToken)
 				if err != nil {
 					s.GlobalService.Logger.Error("process - rnd processing - put to db", zap.Error(err))
 					return nil, err
 				}
+
+				msg = newRndMsg
 			}
 			err = s.broadcastMsg(msg, saiP2pAddress)
 			if err != nil {

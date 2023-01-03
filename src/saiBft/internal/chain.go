@@ -175,6 +175,7 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 			}
 
 			if !s.IsInitialized {
+				Service.GlobalService.Logger.Debug("handlers - handleMessage - not initialized - put to candidates", zap.Int("block_number", msg.Block.Number), zap.String("hash", msg.BlockHash)) // DEBUG
 				err, _ = s.Storage.Put(BlockCandidatesCol, msg, storageToken)
 				if err != nil {
 					Service.GlobalService.Logger.Error("listenFromSaiP2P - initial block consensus msg - put to storage", zap.Error(err))
@@ -369,6 +370,7 @@ func (s *InternalService) handleBlockCandidate(msg *models.BlockConsensusMessage
 			}
 			return nil
 		} else {
+			s.GlobalService.Logger.Debug("chain - handleBlockConsensusMsg - handleBlockCandidate - blockCandidate not found - put to candidates", zap.Int("block_number", msg.Block.Number), zap.String("hash", msg.BlockHash)) // DEBUG
 			err, _ := s.Storage.Put(BlockCandidatesCol, msg, storageToken)
 			if err != nil {
 				s.GlobalService.Logger.Error("handleBlockConsensusMsg - blockHash = msgBlockHash - insert block to BlockChain collection", zap.Error(err))

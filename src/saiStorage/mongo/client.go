@@ -200,7 +200,7 @@ func (c Client) Remove(collectionName string, selector map[string]interface{}) e
 	collection := c.GetCollection(collectionName)
 	selector = c.preprocessSelector(selector)
 
-	_, err := collection.DeleteOne(context.TODO(), selector)
+	_, err := collection.DeleteMany(context.TODO(), selector)
 	if err != nil {
 		return err
 	}

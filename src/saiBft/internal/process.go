@@ -585,6 +585,7 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 
 		// if there is no such blockCandidate, save block to BlockCandidate collection
 		if blockCandidate == nil {
+			s.GlobalService.Logger.Debug("process - formSaveNewBlock  - blockCandidate not found - put to candidates", zap.Int("block_number", newBlock.Block.Number), zap.String("hash", newBlock.BlockHash)) // DEBUG
 			err, _ := s.Storage.Put(BlockCandidatesCol, newBlock, storageToken)
 			if err != nil {
 				s.GlobalService.Logger.Error("process - round == 7 - form and save new block - put to BlockCandidate collection", zap.Error(err))
@@ -608,21 +609,17 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 			s.GlobalService.Logger.Debug("process - formAndSaveNewBlock - blockCandidate after voting", zap.Int("block_number", blockCandidate.Block.Number), zap.Int("votes", blockCandidate.Votes), zap.String("hash", blockCandidate.BlockHash), zap.Strings("addresses", blockCandidate.VotedAddresses))
 
 		skipVoting:
-			if float64(blockCandidate.Votes) >= requiredVotes {
-				err, _ = s.Storage.Put(blockchainCol, blockCandidate, storageToken)
-				if err != nil {
-					s.GlobalService.Logger.Error("process - round == 7 - form and save new block - put block to blockchain collection", zap.Error(err))
-					return nil, err
-				}
-			} else {
-				filter := bson.M{"block_hash": blockCandidate.BlockHash}
-				update := bson.M{"votes": blockCandidate.Votes, "voted_signatures": blockCandidate.Signatures}
-				err, _ := s.Storage.Update(BlockCandidatesCol, filter, update, storageToken)
-				if err != nil {
-					s.GlobalService.Logger.Error("process - round == 7 - form and save new block - put to BlockCandidate collection", zap.Error(err))
-					return nil, err
-				}
+
+			filter := bson.M{"block_hash": blockCandidate.BlockHash}
+			update := bson.M{"votes": blockCandidate.Votes, "voted_signatures": blockCandidate.Signatures}
+
+			s.GlobalService.Logger.Debug("process - formSaveNewBlock  - blockCandidate  found - - not enough votes -  put to candidates", zap.Int("block_number", newBlock.Block.Number), zap.String("hash", newBlock.BlockHash)) // DEBUG
+			err, _ := s.Storage.Update(BlockCandidatesCol, filter, update, storageToken)
+			if err != nil {
+				s.GlobalService.Logger.Error("process - round == 7 - form and save new block - put to BlockCandidate collection", zap.Error(err))
+				return nil, err
 			}
+
 			newBlock = blockCandidate
 
 		}

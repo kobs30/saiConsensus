@@ -82,6 +82,7 @@ type Tx struct {
 	Message         string `json:"message" valid:",required"`
 	SenderSignature string `json:"sender_signature" valid:",required"`
 	MessageHash     string `json:"message_hash" valid:",required"`
+	Nonce           int    `json:"nonce" valid:",required"`
 }
 
 type IP struct {

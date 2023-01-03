@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sort"
 	"strconv"
 	"time"
 
@@ -92,6 +93,7 @@ func (s *InternalService) Processing() {
 
 	//TEST transaction &consensus messages
 	s.saveTestTx(saiBtcAddress, storageToken, saiP2Paddress)
+	s.saveTestTx2(saiBtcAddress, storageToken, saiP2Paddress)
 
 	for {
 	startLoop:
@@ -189,7 +191,7 @@ func (s *InternalService) Processing() {
 					continue
 				}
 
-				//				s.GlobalService.Logger.Sugar().Debugf("Consensus message transactions: %v", msg.Messages) //DEBUG
+				s.GlobalService.Logger.Sugar().Debugf("Consensus message transactions: %v", msg.Messages) //DEBUG
 
 				// update votes for each tx message from consensusMsg
 				for _, txMsgHash := range msg.Messages {
@@ -269,22 +271,11 @@ func (s *InternalService) Processing() {
 					goto startLoop
 				}
 
-				// if newBlock.IsBroadcasted {
-				// 	goto startLoop
-				// }
-
-				// newBlock.IsBroadcasted = true
-
 				err = s.broadcastMsg(newBlock, saiP2Paddress)
 				if err != nil {
 					goto startLoop
 				}
 
-				// err, _ = s.Storage.Update(blockchainCol, bson.M{"block_hash": newBlock.BlockHash}, bson.M{"is_broadcasted": true}, storageToken)
-				// if err != nil {
-				// 	s.GlobalService.Logger.Error("process -  round = 7 - set is_broadcasted to true when broadcast block", zap.Error(err))
-
-				// }
 				goto startLoop
 			}
 		}
@@ -364,7 +355,7 @@ func (s *InternalService) createInitialBlock(address string) (block *models.Bloc
 
 // get messages with votes = 0
 func (s *InternalService) getZeroVotedTransactions(storageToken string) ([]*models.TransactionMessage, error) {
-	err, result := s.Storage.Get("MessagesPool", bson.M{"votes.0": 0, "rnd_processed": true}, bson.M{}, storageToken)
+	err, result := s.Storage.Get("MessagesPool", bson.M{"votes.0": 0, "rnd_processed": true, "block_hash": "", "block_number": 0}, bson.M{}, storageToken)
 	if err != nil {
 		s.GlobalService.Logger.Error("process - round = 0 - get messages with 0 votes", zap.Error(err))
 		return nil, err
@@ -397,6 +388,14 @@ func (s *InternalService) getZeroVotedTransactions(storageToken string) ([]*mode
 			filteredTx = append(filteredTx, tx)
 		}
 	}
+
+	//sort tx messages by nonce, by hash
+	sort.Slice(filteredTx, func(i, j int) bool {
+		if filteredTx[i].Tx.Nonce == filteredTx[j].Tx.Nonce {
+			return filteredTx[i].Tx.MessageHash < filteredTx[j].Tx.MessageHash
+		}
+		return filteredTx[i].Tx.Nonce < filteredTx[j].Tx.Nonce
+	})
 
 	s.GlobalService.Logger.Sugar().Debugf("Got transactions with votes = 0 : %+v", filteredTx) //DEBUG
 
@@ -549,6 +548,16 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 	newBlock.Signatures = append(newBlock.Signatures, btcResp.Signature)
 	newBlock.VotedAddresses = append(newBlock.VotedAddresses, s.BTCkeys.Address)
 
+	if len(txMsgs) == 0 {
+		err := s.updateTxMsgZeroVotes(storageToken)
+		if err != nil {
+			s.GlobalService.Logger.Error("process - round == 7 - form and save new block - update tx msgs zero votes", zap.Error(err))
+			return nil, err
+		}
+		s.GlobalService.Logger.Error("process - round == 7 - form and save new block - to tx messages found")
+		return nil, errNoTxToFromBlock
+	}
+
 	for _, tx := range txMsgs {
 		err, _ := s.Storage.Update(MessagesPoolCol, bson.M{"executed_hash": tx.ExecutedHash}, bson.M{"block_hash": newBlock.BlockHash, "block_number": newBlock.Block.Number}, storageToken)
 		if err != nil {
@@ -557,9 +566,6 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 		}
 		tx.BlockHash = newBlock.BlockHash
 		tx.BlockNumber = newBlock.Block.Number
-	}
-
-	for _, tx := range txMsgs {
 		newBlock.Block.Messages[tx.ExecutedHash] = tx
 	}
 
@@ -717,6 +723,14 @@ func (s *InternalService) getTxMsgsWithCertainNumberOfVotes(storageToken string,
 			filteredTx = append(filteredTx, tx)
 		}
 	}
+
+	sort.Slice(filteredTx, func(i, j int) bool {
+		if filteredTx[i].Tx.Nonce == filteredTx[j].Tx.Nonce {
+			return filteredTx[i].Tx.MessageHash < filteredTx[j].Tx.MessageHash
+		}
+		return filteredTx[i].Tx.Nonce < filteredTx[j].Tx.Nonce
+	})
+
 	return filteredTx, nil
 }
 

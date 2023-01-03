@@ -110,7 +110,6 @@ type TransactionMessage struct {
 	BlockNumber  int         `json:"block_number"`
 	ExecutedHash string      `json:"executed_hash"`
 	RndProcessed bool        `json:"rnd_processed"`
-	Nonce        int         `json:"nonce"`
 }
 
 // transaction struct
@@ -120,6 +119,7 @@ type Tx struct {
 	Message         string `json:"message" valid:",required"`
 	SenderSignature string `json:"sender_signature" valid:",required"`
 	MessageHash     string `json:"message_hash" valid:",required"`
+	Nonce           int    `json:"nonce"`
 }
 
 // tx message struct

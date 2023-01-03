@@ -1,8 +1,6 @@
 package internal
 
 import (
-	"time"
-
 	"github.com/iamthe1whoknocks/bft/models"
 	"github.com/iamthe1whoknocks/bft/utils"
 	"go.uber.org/zap"
@@ -14,11 +12,11 @@ import (
 func (s *InternalService) saveTestTx(saiBtcAddress, storageToken, saiP2PAddress string) {
 	testTxMsg := &models.TransactionMessage{
 		Votes: [7]uint64{},
-		Nonce: time.Now().Nanosecond(),
 		Tx: &models.Tx{
 			Type:          models.TransactionMsgType,
 			SenderAddress: s.BTCkeys.Address,
 			Message:       "test tx message",
+			Nonce:         10,
 		},
 	}
 
@@ -78,4 +76,42 @@ func (s *InternalService) saveTestConsensusMsg(saiBtcAddress, storageToken, send
 
 	s.GlobalService.Logger.Sugar().Debugf("test consensus message saved") //DEBUG
 
+}
+
+// save test tx (for testing purposes)
+func (s *InternalService) saveTestTx2(saiBtcAddress, storageToken, saiP2PAddress string) {
+	testTxMsg := &models.TransactionMessage{
+		Votes: [7]uint64{},
+		Tx: &models.Tx{
+			Type:          models.TransactionMsgType,
+			SenderAddress: s.BTCkeys.Address,
+			Message:       "test tx message 2",
+			Nonce:         4,
+		},
+	}
+
+	testTxHash, err := testTxMsg.Tx.GetHash()
+	if err != nil {
+		s.GlobalService.Logger.Fatal("processing - hash test tx error", zap.Error(err))
+	}
+
+	testTxMsg.Tx.MessageHash = testTxHash
+	testTxMsg.MessageHash = testTxHash
+
+	resp, err := utils.SignMessage(testTxMsg, saiBtcAddress, s.BTCkeys.Private)
+	if err != nil {
+		s.GlobalService.Logger.Fatal("processing - sign test tx error", zap.Error(err))
+	}
+	testTxMsg.Tx.SenderSignature = resp.Signature
+
+	err, _ = s.Storage.Put("MessagesPool", testTxMsg, storageToken)
+	if err != nil {
+		s.GlobalService.Logger.Fatal("processing - put test tx msg", zap.Error(err))
+	}
+
+	bcErr := s.broadcastMsg(testTxMsg.Tx, saiP2PAddress)
+	if bcErr != nil {
+		s.GlobalService.Logger.Fatal("processing - broadcast test tx msg", zap.Error(err))
+	}
+	s.GlobalService.Logger.Sugar().Debugf("test tx message saved") //DEBUG
 }

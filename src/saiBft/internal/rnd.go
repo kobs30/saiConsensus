@@ -173,7 +173,7 @@ getRndForSpecifiedRoundAndBlock:
 				}
 
 				msg.RND.SenderSignature = resp.Signature
-				msg.RND.Round = rndRound - 1
+
 				s.GlobalService.Logger.Sugar().Debugf("NEW MSG : %+v", msg.RND)
 
 				err, _ = s.Storage.Put(RndMessagesPoolCol, msg, storageToken)

@@ -144,6 +144,8 @@ getRndForSpecifiedRoundAndBlock:
 		//s.GlobalService.Logger.Debug("process - rnd processing - rnd msgs after filtration", zap.Any("filtered msgs", filteredRndMsgs))
 
 		for _, msg := range filteredRndMsgs {
+			s.GlobalService.Logger.Sugar().Debugf("ROUND : %d", rndRound)
+			s.GlobalService.Logger.Sugar().Debugf("HANDLING MSG : %+v", msg.RND)
 			if msg.RND.Rnd == rnd {
 				msg.Votes++
 				criteria := bson.M{"message.hash": msg.RND.Hash}
@@ -154,7 +156,7 @@ getRndForSpecifiedRoundAndBlock:
 					return nil, err
 				}
 			} else {
-				s.GlobalService.Logger.Sugar().Debugf("OLD MSG : %+v", msg)
+				s.GlobalService.Logger.Sugar().Debugf("OLD MSG : %+v", msg.RND)
 				msg.RND.Rnd = msg.RND.Rnd + rnd
 
 				hash, err := msg.GetHash()
@@ -171,7 +173,8 @@ getRndForSpecifiedRoundAndBlock:
 				}
 
 				msg.RND.SenderSignature = resp.Signature
-				s.GlobalService.Logger.Sugar().Debugf("NEW MSG : %+v", msg)
+				msg.RND.Round = rndRound
+				s.GlobalService.Logger.Sugar().Debugf("NEW MSG : %+v", msg.RND)
 
 				err, _ = s.Storage.Put(RndMessagesPoolCol, msg, storageToken)
 				if err != nil {

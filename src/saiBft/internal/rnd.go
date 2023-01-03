@@ -154,7 +154,8 @@ getRndForSpecifiedRoundAndBlock:
 					return nil, err
 				}
 			} else {
-				msg.RND.Rnd += rnd
+				s.GlobalService.Logger.Sugar().Debugf("OLD MSG : %+v", msg)
+				msg.RND.Rnd = msg.RND.Rnd + rnd
 
 				hash, err := msg.GetHash()
 				if err != nil {
@@ -170,6 +171,7 @@ getRndForSpecifiedRoundAndBlock:
 				}
 
 				msg.RND.SenderSignature = resp.Signature
+				s.GlobalService.Logger.Sugar().Debugf("NEW MSG : %+v", msg)
 
 				err, _ = s.Storage.Put(RndMessagesPoolCol, msg, storageToken)
 				if err != nil {

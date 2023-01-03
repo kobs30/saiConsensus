@@ -131,9 +131,9 @@ getRndForSpecifiedRoundAndBlock:
 
 		// filter messages which is not from validator list
 		for _, msg := range rndMsgs {
-			if msg.RND.SenderAddress == s.BTCkeys.Address { //do not vote for own message
-				continue
-			}
+			// if msg.RND.SenderAddress == s.BTCkeys.Address { //do not vote for own message
+			// 	continue
+			// }
 			for _, validator := range s.Validators {
 				if validator == msg.RND.SenderAddress {
 					filteredRndMsgs = append(filteredRndMsgs, msg)

@@ -378,6 +378,16 @@ func (s *InternalService) handleBlockCandidate(msg *models.BlockConsensusMessage
 		return nil
 	}
 
+	btcResp, err := utils.SignMessage(blockCandidate, s.GlobalService.Configuration["saiBTC_address"].(string), Service.BTCkeys.Private)
+	if err != nil {
+		Service.GlobalService.Logger.Error("chain - handleBlockConsensusMsg - handleBlockCandidate - signMessage", zap.Error(err))
+		return err
+	}
+
+	blockCandidate.Votes += 1
+	blockCandidate.VotedAddresses = append(blockCandidate.VotedAddresses, s.BTCkeys.Address)
+	blockCandidate.Signatures = append(blockCandidate.Signatures, btcResp.Signature)
+
 	blockCandidate = s.getFilteredBlockConsensus(msg, blockCandidate)
 
 	if blockCandidate == nil {

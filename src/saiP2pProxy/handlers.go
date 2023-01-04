@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"saiP2p/utils"
@@ -194,6 +195,9 @@ func (p *Proxy) sync(c *gin.Context) {
 }
 
 func (p *Proxy) check(c *gin.Context) {
-	c.JSON(200, "check ok")
+	body, _ := ioutil.ReadAll(c.Request.Body)
+	defer c.Request.Body.Close()
+	p.Logger.Debug("check - incoming body", zap.String("body", string(body)))
+	c.JSON(200, nil)
 	return
 }

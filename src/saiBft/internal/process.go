@@ -217,6 +217,10 @@ func (s *InternalService) Processing() {
 				goto startLoop
 			}
 
+			if len(txMsgs) == 0 {
+
+			}
+
 			if round < maxRoundNumber-1 {
 				newConsensusMsg := &models.ConsensusMessage{
 					Type:          models.ConsensusMsgType,
@@ -554,7 +558,7 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 			s.GlobalService.Logger.Error("process - round == 7 - form and save new block - update tx msgs zero votes", zap.Error(err))
 			return nil, err
 		}
-		s.GlobalService.Logger.Error("process - round == 7 - form and save new block - to tx messages found")
+		s.GlobalService.Logger.Error("process - round == 7 - form and save new block - no tx messages found")
 		return nil, errNoTxToFromBlock
 	}
 

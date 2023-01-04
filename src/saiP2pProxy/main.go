@@ -35,7 +35,7 @@ func main() {
 	cfg.AllowAllOrigins = true
 
 	r.POST("/send", proxy.Handler)
-	r.GET("/check", proxy.check)
+	r.POST("/check", proxy.check)
 	r.POST("/sync", proxy.sync)
 	r.Static("/files", "./files")
 

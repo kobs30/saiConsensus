@@ -266,7 +266,6 @@ func (s *InternalService) handleBlockConsensusMsg(saiBTCaddress, saiP2pProxyAddr
 			s.GlobalService.Logger.Debug("chain - handleBlockConsensus - filteredBlock is null")
 			return nil
 		}
-
 		s.GlobalService.Logger.Debug("chain - handle block consensus - msg.Hash==block.Hash = block after updating", zap.Int("block_number", block.Block.Number), zap.Int("votes", block.Votes), zap.String("hash", block.BlockHash), zap.Strings("addresses", block.VotedAddresses))
 
 		err := s.addVotesToBlock(block, storageToken)
@@ -351,7 +350,7 @@ func (s *InternalService) updateBlockchain(msg *models.BlockConsensusMessage, st
 
 // Block candidate logic
 // 1. Get block candidate from db
-//2. update blockchain if blockCandidate votes < incoming msg.Votes
+// 2. update blockchain if blockCandidate votes < incoming msg.Votes
 func (s *InternalService) handleBlockCandidate(msg *models.BlockConsensusMessage, saiP2pProxyAddress, saiP2pAddress, storageToken string) error {
 	requiredVotes := math.Ceil(float64(len(s.Validators)) * 7 / 10)
 
@@ -362,22 +361,21 @@ func (s *InternalService) handleBlockCandidate(msg *models.BlockConsensusMessage
 	}
 
 	if blockCandidate == nil {
-		if float64(msg.Votes) >= requiredVotes {
-			err, _ := s.Storage.Put(blockchainCol, msg, storageToken)
-			if err != nil {
-				s.GlobalService.Logger.Error("handleBlockConsensusMsg - blockHash = msgBlockHash - insert block to BlockCandidates collection", zap.Error(err))
-				return err
-			}
-			return nil
-		} else {
-			s.GlobalService.Logger.Debug("chain - handleBlockConsensusMsg - handleBlockCandidate - blockCandidate not found - put to candidates", zap.Int("block_number", msg.Block.Number), zap.String("hash", msg.BlockHash)) // DEBUG
-			err, _ := s.Storage.Put(BlockCandidatesCol, msg, storageToken)
-			if err != nil {
-				s.GlobalService.Logger.Error("handleBlockConsensusMsg - blockHash = msgBlockHash - insert block to BlockChain collection", zap.Error(err))
-				return err
-			}
-			return nil
+		// if float64(msg.Votes) >= requiredVotes {
+		// 	err, _ := s.Storage.Put(blockchainCol, msg, storageToken)
+		// 	if err != nil {
+		// 		s.GlobalService.Logger.Error("handleBlockConsensusMsg - blockHash = msgBlockHash - insert block to BlockCandidates collection", zap.Error(err))
+		// 		return err
+		// 	}
+		// 	return nil
+		// } else {
+		s.GlobalService.Logger.Debug("chain - handleBlockConsensusMsg - handleBlockCandidate - blockCandidate not found - put to candidates", zap.Int("block_number", msg.Block.Number), zap.String("hash", msg.BlockHash)) // DEBUG
+		err, _ := s.Storage.Put(BlockCandidatesCol, msg, storageToken)
+		if err != nil {
+			s.GlobalService.Logger.Error("handleBlockConsensusMsg - blockHash = msgBlockHash - insert block to BlockChain collection", zap.Error(err))
+			return err
 		}
+		return nil
 	}
 
 	blockCandidate = s.getFilteredBlockConsensus(msg, blockCandidate)

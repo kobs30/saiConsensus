@@ -119,7 +119,7 @@ func (s *InternalService) Processing() {
 			s.GlobalService.Logger.Error("process - process rnd", zap.Error(err))
 			continue
 		}
-		s.GlobalService.Logger.Debug("processing - got rnd", zap.Int("block_number", block.Block.Number), zap.Int64("rnd", rnd.RND.Rnd))
+		s.GlobalService.Logger.Debug("processing - got rnd", zap.Int("block_number", block.Block.Number), zap.Int64("rnd", rnd.Message.Rnd))
 
 	checkRound:
 		s.GlobalService.Logger.Sugar().Debugf("ROUND = %d", round) //DEBUG
@@ -270,7 +270,7 @@ func (s *InternalService) Processing() {
 			} else {
 				s.GlobalService.Logger.Sugar().Debugf("ROUND = %d", round) //DEBUG
 
-				newBlock, err := s.formAndSaveNewBlock(block, saiBtcAddress, storageToken, txMsgs, rnd.RND.Rnd)
+				newBlock, err := s.formAndSaveNewBlock(block, saiBtcAddress, storageToken, txMsgs, rnd.Message.Rnd)
 				if err != nil {
 					goto startLoop
 				}
@@ -359,7 +359,7 @@ func (s *InternalService) createInitialBlock(address string) (block *models.Bloc
 
 // get messages with votes = 0
 func (s *InternalService) getZeroVotedTransactions(storageToken string) ([]*models.TransactionMessage, error) {
-	err, result := s.Storage.Get("MessagesPool", bson.M{"votes.0": 0, "rnd_processed": true, "block_hash": "", "block_number": 0}, bson.M{}, storageToken)
+	err, result := s.Storage.Get(MessagesPoolCol, bson.M{"votes.0": 0}, bson.M{}, storageToken)
 	if err != nil {
 		s.GlobalService.Logger.Error("process - round = 0 - get messages with 0 votes", zap.Error(err))
 		return nil, err
@@ -388,7 +388,7 @@ func (s *InternalService) getZeroVotedTransactions(storageToken string) ([]*mode
 	filteredTx := make([]*models.TransactionMessage, 0)
 
 	for _, tx := range transactions {
-		if tx.BlockNumber == 0 && tx.BlockHash == "" {
+		if tx.BlockHash == "" {
 			filteredTx = append(filteredTx, tx)
 		}
 	}
@@ -698,7 +698,7 @@ func (s *InternalService) getTxMsgsWithCertainNumberOfVotes(storageToken string,
 	filteredTx := make([]*models.TransactionMessage, 0)
 	txMsgs := make([]*models.TransactionMessage, 0)
 
-	err, result := s.Storage.Get("MessagesPool", filterGte, bson.M{}, storageToken)
+	err, result := s.Storage.Get(MessagesPoolCol, filterGte, bson.M{}, storageToken)
 	if err != nil {
 		s.GlobalService.Logger.Error("handlers - process - round != 0 - get tx messages with specified votes count", zap.Float64("votes count", requiredVotes), zap.Error(err))
 		return nil, err

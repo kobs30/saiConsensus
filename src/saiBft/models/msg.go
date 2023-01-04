@@ -109,7 +109,6 @@ type TransactionMessage struct {
 	BlockHash    string      `json:"block_hash"`
 	BlockNumber  int         `json:"block_number"`
 	ExecutedHash string      `json:"executed_hash"`
-	RndProcessed bool        `json:"rnd_processed"`
 }
 
 // transaction struct
@@ -182,14 +181,14 @@ type Parameters struct {
 }
 
 // RND message
-type RNDMessage struct {
-	Votes int    `json:"votes"`
-	Type  string `json:"type" valid:",required"`
-	RND   *RND   `json:"message"`
+type RND struct {
+	Votes   int         `json:"votes"`
+	Message *RNDMessage `json:"message"`
 }
 
 // RND
-type RND struct {
+type RNDMessage struct {
+	Type            string   `json:"type" valid:",required"`
 	SenderAddress   string   `json:"sender_address" valid:",required"`
 	BlockNumber     int      `json:"block_number" valid:",required"`
 	Round           int      `json:"round"`
@@ -207,14 +206,13 @@ func (m *RNDMessage) Validate() error {
 
 // Hashing RND  message
 func (m *RNDMessage) GetHash() (string, error) {
-	b, err := json.Marshal(&RNDMessage{
-		Type: m.Type,
-		RND: &RND{
-			SenderAddress: m.RND.SenderAddress,
-			BlockNumber:   m.RND.BlockNumber,
-			Round:         m.RND.Round,
-			Rnd:           m.RND.Rnd,
-			TxMsgHashes:   m.RND.TxMsgHashes,
+	b, err := json.Marshal(&RND{
+		Message: &RNDMessage{
+			SenderAddress: m.SenderAddress,
+			BlockNumber:   m.BlockNumber,
+			Round:         m.Round,
+			Rnd:           m.Rnd,
+			TxMsgHashes:   m.TxMsgHashes,
 		},
 	})
 	if err != nil {

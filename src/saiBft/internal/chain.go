@@ -198,7 +198,7 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - rndMessage - validate", zap.Error(err))
 				continue
 			}
-			err = utils.ValidateSignature(msg, saiBtcAddress, msg.RND.SenderAddress, msg.RND.SenderSignature)
+			err = utils.ValidateSignature(msg, saiBtcAddress, msg.SenderAddress, msg.SenderSignature)
 			if err != nil {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - rndMessage - validate signature ", zap.Error(err))
 				continue

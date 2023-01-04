@@ -20,5 +20,15 @@ func NewDB() utils.Database {
 		log.Fatalf("configuration : invalid storage password provided, password : %s", Service.GlobalService.Configuration["storage_email"])
 	}
 
-	return utils.Storage(url, email, password)
+	duplicateRequests, ok := Service.GlobalService.Configuration["duplicate_storage_requests"].(bool)
+	if !ok {
+		duplicateRequests = false
+	}
+
+	duplicateRequestsUrl, ok := Service.GlobalService.Configuration["duplicate_storage_requests_url"].(string)
+	if !ok {
+		duplicateRequestsUrl = ""
+	}
+
+	return utils.Storage(url, email, password, duplicateRequests, duplicateRequestsUrl)
 }

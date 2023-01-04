@@ -13,16 +13,20 @@ import (
 )
 
 type Database struct {
-	url      string
-	email    string
-	password string
+	url                  string
+	email                string
+	password             string
+	duplicateRequests    bool
+	duplicateRequestsUrl string
 }
 
-func Storage(Url string, Email string, Password string) Database {
+func Storage(Url string, Email string, Password string, duplicateRequests bool, duplicateRequestsUrl string) Database {
 	return Database{
-		url:      Url,
-		email:    Email,
-		password: Password,
+		url:                  Url,
+		email:                Email,
+		password:             Password,
+		duplicateRequests:    duplicateRequests,
+		duplicateRequestsUrl: duplicateRequestsUrl,
 	}
 }
 
@@ -85,6 +89,11 @@ func (db Database) makeRequest(method string, request StorageRequest, token stri
 	if jsonErr != nil {
 		fmt.Println("Database request error: ", jsonErr)
 		return jsonErr, []byte("")
+	}
+	if db.duplicateRequests {
+		if method == "save" || method == "upsert" || method == "update" {
+			send(db.duplicateRequestsUrl, bytes.NewBuffer(jsonStr), "")
+		}
 	}
 
 	return send(db.url+"/"+method, bytes.NewBuffer(jsonStr), token)

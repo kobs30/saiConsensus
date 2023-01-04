@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"math"
 	"math/rand"
+	"sort"
 	"time"
 
 	"github.com/iamthe1whoknocks/bft/models"
@@ -35,6 +36,15 @@ func (s *InternalService) rndProcessing(saiBTCAddress, saiP2pAddress, storageTok
 			s.GlobalService.Logger.Error("handlers - process - unmarshal result of last block from blockchain collection", zap.Error(err))
 			return nil, err
 		}
+
+		//sort tx messages by nonce, by hash
+		sort.Slice(txMsgs, func(i, j int) bool {
+			if txMsgs[i].Tx.Nonce == txMsgs[j].Tx.Nonce {
+				return txMsgs[i].Tx.MessageHash < txMsgs[j].Tx.MessageHash
+			}
+			return txMsgs[i].Tx.Nonce < txMsgs[j].Tx.Nonce
+		})
+
 		for _, tx := range txMsgs {
 			txMsgsHashes = append(txMsgsHashes, tx.Tx.MessageHash)
 			err, _ := s.Storage.Update(MessagesPoolCol, bson.M{"message_hash": tx.MessageHash}, bson.M{"rnd_processed": true}, storageToken)
@@ -44,8 +54,6 @@ func (s *InternalService) rndProcessing(saiBTCAddress, saiP2pAddress, storageTok
 			}
 		}
 	}
-
-	txMsgHashes := make([]string, 0)
 
 	rndRound := 0
 
@@ -63,7 +71,7 @@ func (s *InternalService) rndProcessing(saiBTCAddress, saiP2pAddress, storageTok
 			BlockNumber:   blockNumber,
 			Round:         rndRound,
 			Rnd:           rnd,
-			TxMsgHashes:   txMsgHashes,
+			TxMsgHashes:   txMsgsHashes,
 		},
 	}
 

@@ -65,17 +65,6 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				continue
 			}
 
-			err, result := s.Storage.Get(MessagesPoolCol, msg, bson.M{}, storageToken)
-			if err != nil {
-				Service.GlobalService.Logger.Error("listenFromSaiP2P - transactionMsg - get from storage", zap.Error(err))
-				continue
-			}
-
-			if len(result) > 2 {
-				Service.GlobalService.Logger.Error("listenFromSaiP2P - transactionMsg - we have sent this message", zap.Error(err))
-				continue
-			}
-
 			err, _ = s.Storage.Put(MessagesPoolCol, msg, storageToken)
 			if err != nil {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - transactionMsg - put to storage", zap.Error(err))
@@ -579,9 +568,6 @@ func (s *InternalService) formSyncRequest(blockNumber int, storageToken string) 
 		return nil, err
 	}
 
-	if len(result) == 2 {
-
-	}
 	err = json.Unmarshal(data, &blocks)
 	if err != nil {
 		s.GlobalService.Logger.Error("chain - handleBlockCandidate - formSyncRequest - unmarshal result of last block from blockchain collection", zap.Error(err), zap.String("data", string(data)))

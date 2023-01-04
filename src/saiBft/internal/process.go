@@ -191,7 +191,7 @@ func (s *InternalService) Processing() {
 					continue
 				}
 
-				s.GlobalService.Logger.Debug("Consensus message transactions", zap.Strings("msgs", msg.Messages), zap.String("hash", msg.Hash)) //DEBUG
+				//s.GlobalService.Logger.Debug("Consensus message transactions", zap.Strings("msgs", msg.Messages), zap.String("hash", msg.Hash)) //DEBUG
 
 				// update votes for each tx message from consensusMsg
 				for _, txMsgHash := range msg.Messages {

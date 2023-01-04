@@ -64,7 +64,7 @@ func (s *InternalService) rndProcessing(saiBTCAddress, saiP2pAddress, storageTok
 	s.GlobalService.Logger.Debug("rnd generated", zap.Int64("rnd", rnd))
 
 	rndMsg := &models.RND{
-		Votes: 1,
+		Votes: 0,
 		Message: &models.RNDMessage{
 			Type:          models.RNDMessageType,
 			SenderAddress: s.BTCkeys.Address,
@@ -102,7 +102,7 @@ func (s *InternalService) rndProcessing(saiBTCAddress, saiP2pAddress, storageTok
 		return nil, err
 	}
 
-	rndMsg, err = s.getValidatedRnd(storageToken, blockNumber)
+	rndMsg, err = s.getValidatedRnd(storageToken, blockNumber, rndRound)
 	if err != nil {
 		goto getRndForSpecifiedRoundAndBlock
 	}
@@ -202,14 +202,14 @@ getRndForSpecifiedRoundAndBlock:
 			}
 		}
 
-		rndMsg, err := s.getValidatedRnd(storageToken, blockNumber)
+		rndMsg, err := s.getValidatedRnd(storageToken, blockNumber, rndRound)
 		if err != nil {
 			goto getRndForSpecifiedRoundAndBlock
 		}
 		return rndMsg, nil
 
 	}
-	rndMsg, err = s.getValidatedRnd(storageToken, blockNumber)
+	rndMsg, err = s.getValidatedRnd(storageToken, blockNumber, rndRound)
 	if err != nil {
 		goto getRndForSpecifiedRoundAndBlock
 	}
@@ -218,9 +218,9 @@ getRndForSpecifiedRoundAndBlock:
 }
 
 // get message with the most votes
-func (s *InternalService) getRndMsgWithMostVotes(storageToken string, blockNumber int) (*models.RND, error) {
+func (s *InternalService) getRndMsgWithMostVotes(storageToken string, blockNumber, rndRound int) (*models.RND, error) {
 	opts := options.Find().SetSort(bson.M{"votes": -1}).SetLimit(1)
-	err, rndResult := s.Storage.Get(RndMessagesPoolCol, bson.M{"message.block_number": blockNumber}, opts, storageToken)
+	err, rndResult := s.Storage.Get(RndMessagesPoolCol, bson.M{"message.block_number": blockNumber, "message.round": rndRound}, opts, storageToken)
 	if err != nil {
 		s.GlobalService.Logger.Error("processing - rnd processing - get rnd with max votes", zap.Error(err))
 		return nil, err
@@ -245,9 +245,9 @@ func (s *InternalService) getRndMsgWithMostVotes(storageToken string, blockNumbe
 }
 
 // get validated rnd to put in block
-func (s *InternalService) getValidatedRnd(storageToken string, blockNumber int) (*models.RND, error) {
+func (s *InternalService) getValidatedRnd(storageToken string, blockNumber, round int) (*models.RND, error) {
 	time.Sleep(time.Duration(s.GlobalService.Configuration["sleep"].(int)) * time.Second)
-	rndMsg, err := s.getRndMsgWithMostVotes(storageToken, blockNumber)
+	rndMsg, err := s.getRndMsgWithMostVotes(storageToken, blockNumber, round)
 	if err != nil {
 		s.GlobalService.Logger.Error("processing - rnd processing - get validated rnd - get rnd with most votes", zap.Error(err))
 		return nil, err

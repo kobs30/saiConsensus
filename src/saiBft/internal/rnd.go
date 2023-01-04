@@ -220,7 +220,7 @@ getRndForSpecifiedRoundAndBlock:
 // get message with the most votes
 func (s *InternalService) getRndMsgWithMostVotes(storageToken string, blockNumber, rndRound int) (*models.RND, error) {
 	opts := options.Find().SetSort(bson.M{"votes": -1}).SetLimit(1)
-	err, rndResult := s.Storage.Get(RndMessagesPoolCol, bson.M{"message.block_number": blockNumber, "message.round": rndRound}, opts, storageToken)
+	err, rndResult := s.Storage.Get(RndMessagesPoolCol, bson.M{"message.block_number": blockNumber}, opts, storageToken)
 	if err != nil {
 		s.GlobalService.Logger.Error("processing - rnd processing - get rnd with max votes", zap.Error(err))
 		return nil, err

@@ -191,7 +191,7 @@ func (s *InternalService) Processing() {
 					continue
 				}
 
-				s.GlobalService.Logger.Sugar().Debugf("Consensus message transactions: %v", msg.Messages) //DEBUG
+				s.GlobalService.Logger.Debug("Consensus message transactions", zap.Strings("msgs", msg.Messages), zap.String("hash", msg.Hash)) //DEBUG
 
 				// update votes for each tx message from consensusMsg
 				for _, txMsgHash := range msg.Messages {
@@ -450,7 +450,7 @@ func checkConsensusMsgSender(validators []string, msg *models.ConsensusMessage) 
 
 // get consensus messages for the round
 func (s *InternalService) getConsensusMsgForTheRound(round, blockNumber int, storageToken string) ([]*models.ConsensusMessage, error) {
-	err, result := s.Storage.Get("ConsensusPool", bson.M{"round": round, "block_number": blockNumber}, bson.M{}, storageToken)
+	err, result := s.Storage.Get(ConsensusPoolCol, bson.M{"round": round, "block_number": blockNumber}, bson.M{}, storageToken)
 	if err != nil {
 		s.GlobalService.Logger.Error("process - round != 0 - get messages for specified round", zap.Error(err))
 		return nil, err

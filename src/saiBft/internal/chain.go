@@ -82,7 +82,7 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				continue
 			}
 
-			//Service.GlobalService.Logger.Sugar().Debugf("TransactionMsg was saved in MessagesPool storage, msg : %+v\n", msg)
+			Service.GlobalService.Logger.Debug("TransactionMsg was saved in MessagesPool", zap.String("hash", msg.Tx.MessageHash), zap.String("msg", msg.Tx.Message))
 		case *models.TxFromHandler:
 			// skip if state is not initialized
 			if !s.IsInitialized {
@@ -124,7 +124,7 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				continue
 			}
 
-			Service.GlobalService.Logger.Sugar().Debugf("TransactionMsg was saved in MessagesPool storage, msg : %+v\n", msg)
+			Service.GlobalService.Logger.Debug("TransactionMsg was saved in MessagesPool", zap.String("hash", msg.Tx.MessageHash), zap.String("msg", msg.Tx.Message))
 			if tx.IsFromCli {
 				s.TxHandlerSyncCh <- struct{}{}
 			}
@@ -151,7 +151,7 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - consensusMsg - put to storage", zap.Error(err))
 				continue
 			}
-			//			Service.GlobalService.Logger.Sugar().Debugf("ConsensusMsg was saved in ConsensusPool storage, msg : %+v\n", msg)
+			Service.GlobalService.Logger.Debug("ConsensusMsg was saved in ConsensusPool storage", zap.String("hash", msg.Hash))
 			continue
 		case *models.BlockConsensusMessage:
 			msg := data.(*models.BlockConsensusMessage)
@@ -578,9 +578,13 @@ func (s *InternalService) formSyncRequest(blockNumber int, storageToken string) 
 		Service.GlobalService.Logger.Error("chain - handleBlockCandidate - formSyncRequest - extract data from response", zap.Error(err))
 		return nil, err
 	}
+
+	if len(result) == 2 {
+
+	}
 	err = json.Unmarshal(data, &blocks)
 	if err != nil {
-		s.GlobalService.Logger.Error("chain - handleBlockCandidate - formSyncRequest - unmarshal result of last block from blockchain collection", zap.Error(err))
+		s.GlobalService.Logger.Error("chain - handleBlockCandidate - formSyncRequest - unmarshal result of last block from blockchain collection", zap.Error(err), zap.String("data", string(data)))
 		return nil, err
 	}
 	block := blocks[0]

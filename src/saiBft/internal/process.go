@@ -540,6 +540,17 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 	newBlock.BlockHash = blockHash
 	newBlock.Block.BlockHash = blockHash
 
+	for _, tx := range txMsgs {
+		err, _ := s.Storage.Update(MessagesPoolCol, bson.M{"executed_hash": tx.ExecutedHash}, bson.M{"block_hash": newBlock.BlockHash, "block_number": newBlock.Block.Number}, storageToken)
+		if err != nil {
+			s.GlobalService.Logger.Error("process - round == 7 - form and save new block - update tx blockhash", zap.Error(err))
+			return nil, err
+		}
+		tx.BlockHash = newBlock.BlockHash
+		tx.BlockNumber = newBlock.Block.Number
+		newBlock.Block.Messages[tx.ExecutedHash] = tx
+	}
+
 	btcResp, err := utils.SignMessage(newBlock, saiBTCaddress, s.BTCkeys.Private)
 	if err != nil {
 		s.GlobalService.Logger.Error("process - round == 7 - form and save new block - sign message", zap.Error(err))
@@ -561,18 +572,6 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 		s.GlobalService.Logger.Error("process - round == 7 - form and save new block - no tx messages found")
 		return nil, errNoTxToFromBlock
 	}
-
-	for _, tx := range txMsgs {
-		err, _ := s.Storage.Update(MessagesPoolCol, bson.M{"executed_hash": tx.ExecutedHash}, bson.M{"block_hash": newBlock.BlockHash, "block_number": newBlock.Block.Number}, storageToken)
-		if err != nil {
-			s.GlobalService.Logger.Error("process - round == 7 - form and save new block - update tx blockhash", zap.Error(err))
-			return nil, err
-		}
-		tx.BlockHash = newBlock.BlockHash
-		tx.BlockNumber = newBlock.Block.Number
-		newBlock.Block.Messages[tx.ExecutedHash] = tx
-	}
-
 	s.GlobalService.Logger.Debug("process - formAndSaveNewBlock - formed block before count votes", zap.Int("block_number", newBlock.Block.Number), zap.Int("votes", newBlock.Votes), zap.String("hash", newBlock.BlockHash), zap.Strings("addresses", newBlock.VotedAddresses))
 
 	requiredVotes := math.Ceil(float64(len(s.Validators)) * 7 / 10)

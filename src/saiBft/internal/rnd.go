@@ -179,7 +179,7 @@ getRndForSpecifiedRoundAndBlock:
 			} else {
 				rnd += msg.Message.Rnd
 				newRndMsg = &models.RND{
-					Votes: msg.Votes,
+					Votes: 1,
 					Message: &models.RNDMessage{
 						Type:          models.RNDMessageType,
 						SenderAddress: s.BTCkeys.Address,

@@ -218,6 +218,7 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 					continue
 				}
 				Service.GlobalService.Logger.Sugar().Debugf("RndMsg was saved in RndPool storage, msg : %+v\n", msg)
+				continue
 			}
 			rndMsg.Votes++
 			criteria := bson.M{"message.hash": rndMsg.Message.Hash}

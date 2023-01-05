@@ -203,7 +203,9 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - rndMessage - validate signature ", zap.Error(err))
 				continue
 			}
-			err, _ = s.Storage.Put(RndMessagesPoolCol, msg, storageToken)
+			err, _ = s.Storage.Put(RndMessagesPoolCol, &models.RND{
+				Message: msg,
+			}, storageToken)
 			if err != nil {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - rndMessage - put to storage", zap.Error(err))
 				continue

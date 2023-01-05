@@ -112,7 +112,7 @@ func (s *InternalService) rndProcessing(saiBTCAddress, saiP2pAddress, storageTok
 getRndForSpecifiedRoundAndBlock:
 	rndRound++
 
-	s.GlobalService.Logger.Debug("process - rnd processing -  new round", zap.Int("round", rndRound))
+	s.GlobalService.Logger.Debug("process - rnd processing -  new round", zap.Int("round", rndRound), zap.Int("rnd", int(rnd)))
 
 	// get rnd messages for the round and for block
 	err, result = s.Storage.Get(RndMessagesPoolCol, bson.M{"message.block_number": blockNumber}, bson.M{}, storageToken)

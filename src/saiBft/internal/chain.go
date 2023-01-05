@@ -203,15 +203,32 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - rndMessage - validate signature ", zap.Error(err))
 				continue
 			}
-			err, _ = s.Storage.Put(RndMessagesPoolCol, &models.RND{
-				Votes:   1,
-				Message: msg,
-			}, storageToken)
-			if err != nil {
-				Service.GlobalService.Logger.Error("listenFromSaiP2P - rndMessage - put to storage", zap.Error(err))
+			rndMsg, err := s.getRndMsgByRnd(storageToken, msg.BlockNumber, int(msg.Rnd))
+			if err != nil && err != errNoRndMsgsFound {
+				Service.GlobalService.Logger.Error("listenFromSaiP2P - rndMessage - get rnd message ", zap.Error(err))
 				continue
 			}
-			Service.GlobalService.Logger.Sugar().Debugf("RndMsg was saved in RndPool storage, msg : %+v\n", msg)
+			if err == errNoRndMsgsFound {
+				err, _ = s.Storage.Put(RndMessagesPoolCol, &models.RND{
+					Votes:   1,
+					Message: msg,
+				}, storageToken)
+				if err != nil {
+					Service.GlobalService.Logger.Error("listenFromSaiP2P - rndMessage - put to storage", zap.Error(err))
+					continue
+				}
+				Service.GlobalService.Logger.Sugar().Debugf("RndMsg was saved in RndPool storage, msg : %+v\n", msg)
+			}
+			rndMsg.Votes++
+			criteria := bson.M{"message.hash": rndMsg.Message.Hash}
+			update := bson.M{"$inc": bson.M{"votes": 1}}
+			err, _ = s.Storage.Upsert(RndMessagesPoolCol, criteria, update, storageToken)
+			if err != nil {
+				Service.GlobalService.Logger.Error("istenFromSaiP2P - rndMessage - update votes in rnd msg", zap.Error(err))
+				continue
+			}
+
+			Service.GlobalService.Logger.Sugar().Debugf("RndMsg votes was updated : %+v\n", rndMsg)
 			continue
 		default:
 			Service.GlobalService.Logger.Error("listenFromSaiP2P - got wrong msg type", zap.Any("type", reflect.TypeOf(data)))

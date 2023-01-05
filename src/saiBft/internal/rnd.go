@@ -179,7 +179,7 @@ getRndForSpecifiedRoundAndBlock:
 			} else {
 				rnd += msg.Message.Rnd
 				newRndMsg = &models.RND{
-					Votes: 1,
+					Votes: +1,
 					Message: &models.RNDMessage{
 						Type:          models.RNDMessageType,
 						SenderAddress: s.BTCkeys.Address,
@@ -272,4 +272,29 @@ func (s *InternalService) getValidatedRnd(storageToken string, blockNumber, roun
 		s.GlobalService.Logger.Debug("processing - rnd processing - rnd message to add to block was not found", zap.Float64("required votes", requiredVotes), zap.Any("rnd message", rndMsg))
 		return nil, errNotEnoughVotes
 	}
+}
+
+func (s *InternalService) getRndMsgByRnd(storageToken string, blockNumber, rnd int) (*models.RND, error) {
+	err, rndResult := s.Storage.Get(RndMessagesPoolCol, bson.M{"message.block_number": blockNumber, "message.rnd": rnd}, bson.M{}, storageToken)
+	if err != nil {
+		s.GlobalService.Logger.Error("processing - rnd processing - get rnd with max votes", zap.Error(err))
+		return nil, err
+	}
+	if len(rndResult) == 2 {
+		return nil, errNoRndMsgsFound
+	}
+
+	RNDMsgs := make([]*models.RND, 0)
+	data, err := utils.ExtractResult(rndResult)
+	if err != nil {
+		s.GlobalService.Logger.Error("processing - rnd processing - extract data from response", zap.Error(err))
+		return nil, err
+	}
+	err = json.Unmarshal(data, &RNDMsgs)
+	if err != nil {
+		s.GlobalService.Logger.Error("processing - rnd processing - unmarshal", zap.Error(err))
+		return nil, err
+	}
+	RNDMsg := RNDMsgs[0]
+	return RNDMsg, nil
 }

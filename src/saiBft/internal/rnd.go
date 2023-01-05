@@ -115,7 +115,7 @@ getRndForSpecifiedRoundAndBlock:
 	s.GlobalService.Logger.Debug("process - rnd processing -  new round", zap.Int("round", rndRound))
 
 	// get rnd messages for the round and for block
-	err, result = s.Storage.Get(RndMessagesPoolCol, bson.M{"message.block_number": blockNumber, "message.round": rndRound}, bson.M{}, storageToken)
+	err, result = s.Storage.Get(RndMessagesPoolCol, bson.M{"message.block_number": blockNumber}, bson.M{}, storageToken)
 	if err != nil {
 		s.GlobalService.Logger.Error("processing - rnd processing - get rnd for specified round/block", zap.Error(err))
 		return nil, err
@@ -150,6 +150,7 @@ getRndForSpecifiedRoundAndBlock:
 		//s.GlobalService.Logger.Debug("process - rnd processing - rnd msgs after filtration", zap.Any("filtered msgs", filteredRndMsgs))
 
 		for _, msg := range filteredRndMsgs {
+			var newRndMsg *models.RND
 			if msg.Message.Rnd == rnd {
 				s.GlobalService.Logger.Debug("process - rnd - found rnd msg with the same rnd", zap.Int64("rnd", msg.Message.Rnd), zap.Int("round", rndRound))
 				msg.Votes++
@@ -160,9 +161,20 @@ getRndForSpecifiedRoundAndBlock:
 					s.GlobalService.Logger.Error("handlers - process - round != 0 - get messages for specified round", zap.Error(err))
 					return nil, err
 				}
+				// newRndMsg = &models.RND{
+				// 	Votes: msg.Votes,
+				// 	Message: &models.RNDMessage{
+				// 		Type:          models.RNDMessageType,
+				// 		SenderAddress: s.BTCkeys.Address,
+				// 		BlockNumber:   msg.Message.BlockNumber,
+				// 		Round:         rndRound + 1,
+				// 		Rnd:           rnd,
+				// 		TxMsgHashes:   msg.Message.TxMsgHashes,
+				// 	},
+				// }
 			} else {
 				rnd += msg.Message.Rnd
-				newRndMsg := &models.RND{
+				newRndMsg = &models.RND{
 					Votes: msg.Votes,
 					Message: &models.RNDMessage{
 						Type:          models.RNDMessageType,
@@ -174,7 +186,6 @@ getRndForSpecifiedRoundAndBlock:
 					},
 				}
 				s.GlobalService.Logger.Debug("process - rnd - rnd != msg.Rnd - sum rnd", zap.Int64("rnd", newRndMsg.Message.Rnd), zap.Int("round", newRndMsg.Message.Round))
-
 				hash, err := newRndMsg.Message.GetHash()
 				if err != nil {
 					s.GlobalService.Logger.Error("process - rnd processing - get hash", zap.Error(err))
@@ -182,7 +193,7 @@ getRndForSpecifiedRoundAndBlock:
 				}
 				newRndMsg.Message.Hash = hash
 
-				resp, err := utils.SignMessage(newRndMsg, saiBTCAddress, s.BTCkeys.Private)
+				resp, err := utils.SignMessage(newRndMsg.Message, saiBTCAddress, s.BTCkeys.Private)
 				if err != nil {
 					s.GlobalService.Logger.Error("process - rnd processing - sign message", zap.Error(err))
 					return nil, err
@@ -205,6 +216,7 @@ getRndForSpecifiedRoundAndBlock:
 			}
 		}
 	}
+
 	rndMsg, err = s.getValidatedRnd(storageToken, blockNumber, rndRound)
 	if err != nil {
 		goto getRndForSpecifiedRoundAndBlock

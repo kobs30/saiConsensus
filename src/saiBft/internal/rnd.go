@@ -115,7 +115,7 @@ getRndForSpecifiedRoundAndBlock:
 	s.GlobalService.Logger.Debug("process - rnd processing -  new round", zap.Int("round", rndRound), zap.Int("rnd", int(rnd)))
 
 	// get rnd messages for the round and for block
-	err, result = s.Storage.Get(RndMessagesPoolCol, bson.M{"message.block_number": blockNumber}, bson.M{}, storageToken)
+	err, result = s.Storage.Get(RndMessagesPoolCol, bson.M{"message.block_number": blockNumber, "message.round": rndRound}, bson.M{}, storageToken)
 	if err != nil {
 		s.GlobalService.Logger.Error("processing - rnd processing - get rnd for specified round/block", zap.Error(err))
 		return nil, err
@@ -152,10 +152,6 @@ getRndForSpecifiedRoundAndBlock:
 		for _, msg := range filteredRndMsgs {
 			var newRndMsg *models.RND
 			if msg.Message.Rnd == rnd {
-				if msg.Message.SenderAddress == s.BTCkeys.Address {
-					s.GlobalService.Logger.Debug("process - rnd - found rnd msg with the same rnd and address - skip voting", zap.Int64("rnd", msg.Message.Rnd), zap.Int("round", rndRound))
-					continue
-				}
 				s.GlobalService.Logger.Debug("process - rnd - found rnd msg with the same rnd", zap.Int64("rnd", msg.Message.Rnd), zap.Int("round", rndRound))
 				msg.Votes++
 				criteria := bson.M{"message.hash": msg.Message.Hash}
@@ -165,22 +161,18 @@ getRndForSpecifiedRoundAndBlock:
 					s.GlobalService.Logger.Error("handlers - process - round != 0 - get messages for specified round", zap.Error(err))
 					return nil, err
 				}
-				// newRndMsg = &models.RND{
-				// 	Votes: msg.Votes,
-				// 	Message: &models.RNDMessage{
-				// 		Type:          models.RNDMessageType,
-				// 		SenderAddress: s.BTCkeys.Address,
-				// 		BlockNumber:   msg.Message.BlockNumber,
-				// 		Round:         rndRound + 1,
-				// 		Rnd:           rnd,
-				// 		TxMsgHashes:   msg.Message.TxMsgHashes,
-				// 	},
-				// }
-			} else {
-				if msg.Message.SenderAddress == s.BTCkeys.Address {
-					s.GlobalService.Logger.Debug("process - rnd - found rnd msg with the same rnd and address - skip voting", zap.Int64("rnd", msg.Message.Rnd), zap.Int("round", rndRound))
-					continue
+				newRndMsg = &models.RND{
+					Votes: msg.Votes,
+					Message: &models.RNDMessage{
+						Type:          models.RNDMessageType,
+						SenderAddress: s.BTCkeys.Address,
+						BlockNumber:   msg.Message.BlockNumber,
+						Round:         rndRound + 1,
+						Rnd:           rnd,
+						TxMsgHashes:   msg.Message.TxMsgHashes,
+					},
 				}
+			} else {
 				rnd += msg.Message.Rnd
 				newRndMsg = &models.RND{
 					Votes: +1,
@@ -216,11 +208,11 @@ getRndForSpecifiedRoundAndBlock:
 				}
 				s.GlobalService.Logger.Debug("process - rnd - rnd != msg.Rnd - sum rnd - put to db", zap.Int64("rnd", newRndMsg.Message.Rnd), zap.Int("round", newRndMsg.Message.Round))
 
-				err = s.broadcastMsg(newRndMsg.Message, saiP2pAddress)
-				if err != nil {
-					s.GlobalService.Logger.Error("processing - rnd processing - broadcast msg", zap.Error(err))
-					return nil, err
-				}
+			}
+			err = s.broadcastMsg(newRndMsg.Message, saiP2pAddress)
+			if err != nil {
+				s.GlobalService.Logger.Error("processing - rnd processing - broadcast msg", zap.Error(err))
+				return nil, err
 			}
 		}
 	}
@@ -235,7 +227,7 @@ getRndForSpecifiedRoundAndBlock:
 // get message with the most votes
 func (s *InternalService) getRndMsgWithMostVotes(storageToken string, blockNumber, rndRound int) (*models.RND, error) {
 	opts := options.Find().SetSort(bson.M{"votes": -1}).SetLimit(1)
-	err, rndResult := s.Storage.Get(RndMessagesPoolCol, bson.M{"message.block_number": blockNumber}, opts, storageToken)
+	err, rndResult := s.Storage.Get(RndMessagesPoolCol, bson.M{"message.block_number": blockNumber, "message.round": rndRound}, opts, storageToken)
 	if err != nil {
 		s.GlobalService.Logger.Error("processing - rnd processing - get rnd with max votes", zap.Error(err))
 		return nil, err

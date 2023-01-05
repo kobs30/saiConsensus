@@ -189,7 +189,7 @@ getRndForSpecifiedRoundAndBlock:
 						TxMsgHashes:   msg.Message.TxMsgHashes,
 					},
 				}
-				s.GlobalService.Logger.Debug("process - rnd - rnd != msg.Rnd - sum rnd", zap.Int64("rnd", newRndMsg.Message.Rnd), zap.Int("round", newRndMsg.Message.Round))
+
 				hash, err := newRndMsg.Message.GetHash()
 				if err != nil {
 					s.GlobalService.Logger.Error("process - rnd processing - get hash", zap.Error(err))

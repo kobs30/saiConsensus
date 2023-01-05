@@ -152,6 +152,10 @@ getRndForSpecifiedRoundAndBlock:
 		for _, msg := range filteredRndMsgs {
 			var newRndMsg *models.RND
 			if msg.Message.Rnd == rnd {
+				if msg.Message.SenderAddress == s.BTCkeys.Address {
+					s.GlobalService.Logger.Debug("process - rnd - found rnd msg with the same rnd and address - skip voting", zap.Int64("rnd", msg.Message.Rnd), zap.Int("round", rndRound))
+					continue
+				}
 				s.GlobalService.Logger.Debug("process - rnd - found rnd msg with the same rnd", zap.Int64("rnd", msg.Message.Rnd), zap.Int("round", rndRound))
 				msg.Votes++
 				criteria := bson.M{"message.hash": msg.Message.Hash}

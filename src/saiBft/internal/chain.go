@@ -221,7 +221,7 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				continue
 			}
 			rndMsg.Votes++
-			criteria := bson.M{"message.hash": rndMsg.Message.Hash}
+			criteria := bson.M{"message.block_number": rndMsg.Message.BlockNumber, "message.rnd": rndMsg.Message.Rnd}
 			update := bson.M{"$inc": bson.M{"votes": 1}}
 			err, _ = s.Storage.Upsert(RndMessagesPoolCol, criteria, update, storageToken)
 			if err != nil {

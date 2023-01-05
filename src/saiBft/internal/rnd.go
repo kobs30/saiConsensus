@@ -95,6 +95,7 @@ func (s *InternalService) rndProcessing(saiBTCAddress, saiP2pAddress, storageTok
 		s.GlobalService.Logger.Error("process - rnd processing - put to db", zap.Error(err))
 		return nil, err
 	}
+	s.GlobalService.Logger.Debug("process - rnd - put initial rnd msg", zap.Int("rnd", int(rndMsg.Message.Rnd)))
 
 	err = s.broadcastMsg(rndMsg.Message, saiP2pAddress)
 	if err != nil {
@@ -119,7 +120,7 @@ getRndForSpecifiedRoundAndBlock:
 		s.GlobalService.Logger.Error("processing - rnd processing - get rnd for specified round/block", zap.Error(err))
 		return nil, err
 	}
-	//s.GlobalService.Logger.Debug("process - rnd processing - got msg for block and round", zap.Int("block", blockNumber), zap.Int("round", rndRound), zap.String("rnd msgs", string(result)))
+	s.GlobalService.Logger.Debug("process - rnd processing - got msg for block and round", zap.Int("block", blockNumber), zap.Int("round", rndRound), zap.String("rnd msgs", string(result)))
 
 	//if specified messages was found
 	if len(result) != 2 {
@@ -150,6 +151,7 @@ getRndForSpecifiedRoundAndBlock:
 
 		for _, msg := range filteredRndMsgs {
 			if msg.Message.Rnd == rnd {
+				s.GlobalService.Logger.Debug("process - rnd - found rnd msg with the same rnd", zap.Int64("rnd", msg.Message.Rnd), zap.Int("round", rndRound))
 				msg.Votes++
 				criteria := bson.M{"message.hash": msg.Message.Hash}
 				update := bson.M{"$inc": bson.M{"votes": 1}}
@@ -171,6 +173,7 @@ getRndForSpecifiedRoundAndBlock:
 						TxMsgHashes:   msg.Message.TxMsgHashes,
 					},
 				}
+				s.GlobalService.Logger.Debug("process - rnd - rnd != msg.Rnd - sum rnd", zap.Int64("rnd", newRndMsg.Message.Rnd), zap.Int("round", newRndMsg.Message.Round))
 
 				hash, err := newRndMsg.Message.GetHash()
 				if err != nil {
@@ -192,29 +195,21 @@ getRndForSpecifiedRoundAndBlock:
 					s.GlobalService.Logger.Error("process - rnd processing - put to db", zap.Error(err))
 					return nil, err
 				}
+				s.GlobalService.Logger.Debug("process - rnd - rnd != msg.Rnd - sum rnd - put to db", zap.Int64("rnd", newRndMsg.Message.Rnd), zap.Int("round", newRndMsg.Message.Round))
 
-				msg = newRndMsg
-			}
-			err = s.broadcastMsg(msg.Message, saiP2pAddress)
-			if err != nil {
-				s.GlobalService.Logger.Error("processing - rnd processing - broadcast msg", zap.Error(err))
-				return nil, err
+				err = s.broadcastMsg(newRndMsg.Message, saiP2pAddress)
+				if err != nil {
+					s.GlobalService.Logger.Error("processing - rnd processing - broadcast msg", zap.Error(err))
+					return nil, err
+				}
 			}
 		}
-
-		rndMsg, err := s.getValidatedRnd(storageToken, blockNumber, rndRound)
-		if err != nil {
-			goto getRndForSpecifiedRoundAndBlock
-		}
-		return rndMsg, nil
-
 	}
 	rndMsg, err = s.getValidatedRnd(storageToken, blockNumber, rndRound)
 	if err != nil {
 		goto getRndForSpecifiedRoundAndBlock
 	}
 	return rndMsg, nil
-
 }
 
 // get message with the most votes

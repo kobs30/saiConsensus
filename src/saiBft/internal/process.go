@@ -590,7 +590,7 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 
 		// if there is no such blockCandidate, save block to BlockCandidate collection
 		if blockCandidate == nil {
-			s.GlobalService.Logger.Debug("process - formSaveNewBlock  - blockCandidate not found - put to candidates", zap.Int("block_number", newBlock.Block.Number), zap.String("hash", newBlock.BlockHash), zap.Strings("signatures", blockCandidate.Signatures)) // DEBUG
+			s.GlobalService.Logger.Debug("process - formSaveNewBlock  - blockCandidate not found - put to candidates", zap.Int("block_number", newBlock.Block.Number), zap.String("hash", newBlock.BlockHash), zap.Strings("signatures", newBlock.Signatures)) // DEBUG
 			err, _ := s.Storage.Put(BlockCandidatesCol, newBlock, storageToken)
 			if err != nil {
 				s.GlobalService.Logger.Error("process - round == 7 - form and save new block - put to BlockCandidate collection", zap.Error(err))

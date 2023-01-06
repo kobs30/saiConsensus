@@ -8,8 +8,8 @@
     port: 8019
   storage_token: "12345"
   validators: ["15ycVNQF21PzUBFuKXgpKdekFxoRkH4LFT","1Bit5YxmptszS8JUfF7w3jhuw3wBNdLrHV"]
-  #validators: ["1Bit5YxmptszS8JUfF7w3jhuw3wBNdLrHV"]
-  sleep: 3
+  #svalidators: ["15ycVNQF21PzUBFuKXgpKdekFxoRkH4LFT"]
+  sleep: 5
   storage_url: "http://sai-storage:8801"
   storage_email: "ddd@mial.com"
   storage_password: "fdfsdf"
@@ -18,3 +18,6 @@
   log_mode: "debug"
   saiProxy_address: "http://sai-p2p-proxy:8071"
   nodes_blacklist: ["18.218.186.169:9971"]
+  duplicate_storage_requests: true
+  duplicate_storage_requests_url: "http://sai-p2p-proxy:8071/check"
+  

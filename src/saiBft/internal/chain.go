@@ -192,7 +192,7 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				continue
 			}
 			msg := data.(*models.RNDMessage)
-			Service.GlobalService.Logger.Sugar().Debugf("chain - got rnd message : %+v", msg) //DEBUG
+			//			Service.GlobalService.Logger.Sugar().Debugf("chain - got rnd message : %+v", msg) //DEBUG
 			err := msg.Validate()
 			if err != nil {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - rndMessage - validate", zap.Error(err))
@@ -308,7 +308,7 @@ func (s *InternalService) getBlockCandidate(blockHash string, storageToken strin
 // add vote to block N
 func (s *InternalService) addVotesToBlock(msg *models.Block, block *models.BlockConsensusMessage, storageToken string) error {
 	newSignatures := make([]string, 0)
-	newSignatures = append(block.Signatures, msg.SenderAddress)
+	newSignatures = append(block.Signatures, msg.SenderSignature)
 	filter := bson.M{"block.number": block.Block.Number, "block_hash": block.BlockHash}
 	update := bson.M{"votes": block.Votes + 1, "voted_signatures": newSignatures}
 	err, _ := s.Storage.Update(blockchainCol, filter, update, storageToken)

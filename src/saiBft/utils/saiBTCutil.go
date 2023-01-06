@@ -63,13 +63,13 @@ func GetBtcKeys(address string) (*models.BtcKeys, []byte, error) {
 func ValidateSignature(msg interface{}, address, SenderAddress, signature string) (err error) {
 	b := make([]byte, 0)
 	switch msg.(type) {
-	case *models.BlockConsensusMessage:
-		BCMsg := msg.(*models.BlockConsensusMessage)
+	case *models.Block:
+		BCMsg := msg.(*models.Block)
 		b, err = json.Marshal(&models.Block{
-			Number:            BCMsg.Block.Number,
-			PreviousBlockHash: BCMsg.Block.PreviousBlockHash,
-			Messages:          BCMsg.Block.Messages,
-			SenderAddress:     BCMsg.Block.SenderAddress,
+			Number:            BCMsg.Number,
+			PreviousBlockHash: BCMsg.PreviousBlockHash,
+			Messages:          BCMsg.Messages,
+			SenderAddress:     BCMsg.SenderAddress,
 		})
 		if err != nil {
 			return fmt.Errorf(" marshal blockConsensusMessage : %w", err)
@@ -130,13 +130,13 @@ func ValidateSignature(msg interface{}, address, SenderAddress, signature string
 func SignMessage(msg interface{}, address, privateKey string) (resp *models.SignMessageResponse, err error) {
 	var preparedString string
 	switch msg.(type) {
-	case *models.BlockConsensusMessage:
-		BCMsg := msg.(*models.BlockConsensusMessage)
+	case *models.Block:
+		BCMsg := msg.(*models.Block)
 		data, err := json.Marshal(&models.Block{
-			Number:            BCMsg.Block.Number,
-			PreviousBlockHash: BCMsg.Block.PreviousBlockHash,
-			Messages:          BCMsg.Block.Messages,
-			SenderAddress:     BCMsg.Block.SenderAddress,
+			Number:            BCMsg.Number,
+			PreviousBlockHash: BCMsg.PreviousBlockHash,
+			Messages:          BCMsg.Messages,
+			SenderAddress:     BCMsg.SenderAddress,
 		})
 		if err != nil {
 			return nil, err

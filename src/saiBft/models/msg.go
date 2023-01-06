@@ -57,28 +57,26 @@ func (m *ConsensusMessage) GetHash() (string, error) {
 
 // BlockConsensus message
 type BlockConsensusMessage struct {
-	Type           string   `json:"type" valid:",required"`
-	BlockHash      string   `json:"block_hash" valid:",required"`
-	Votes          int      `json:"votes"` // additional field, which was not added by Valeriy
-	Block          *Block   `json:"block" valid:",required"`
-	Count          int      `json:"-"` // extended value for consensus while get missed blocks from p2p services
-	Signatures     []string `json:"voted_signatures"`
-	VotedAddresses []string `json:"voted_addresses"`
-	BaseRND        int64    `json:"base_rnd"`
-	IsBroadcasted  bool     `json:"is_broadcasted"`
+	BlockHash  string   `json:"block_hash" valid:",required"`
+	Votes      int      `json:"votes"` // additional field, which was not added by Valeriy
+	Block      *Block   `json:"block" valid:",required"`
+	Count      int      `json:"-"` // extended value for consensus while get missed blocks from p2p services
+	Signatures []string `json:"voted_signatures"`
 }
 
 type Block struct {
+	Type              string                         `json:"type" valid:",required"`
 	Number            int                            `json:"number" valid:",required"`
 	PreviousBlockHash string                         `json:"prev_block_hash" valid:",required"`
 	SenderAddress     string                         `json:"sender_address" valid:",required"`
 	SenderSignature   string                         `json:"sender_signature,omitempty" valid:",required"`
 	BlockHash         string                         `json:"block_hash"`
 	Messages          map[string]*TransactionMessage `json:"messages"`
+	BaseRND           int64                          `json:"base_rnd"`
 }
 
 // Validate block consensus message
-func (m *BlockConsensusMessage) Validate() error {
+func (m *Block) Validate() error {
 	_, err := valid.ValidateStruct(m)
 	return err
 }

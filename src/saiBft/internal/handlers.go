@@ -170,7 +170,7 @@ var HandleMessage = saiService.HandlerElement{
 
 		switch m["type"].(string) {
 		case models.BlockConsensusMsgType:
-			msg := models.BlockConsensusMessage{}
+			msg := models.Block{}
 			b, err := json.Marshal(m)
 			if err != nil {
 				return nil, fmt.Errorf("handlers - handle message - unmarshal : %w", err)

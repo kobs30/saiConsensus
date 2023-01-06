@@ -185,30 +185,29 @@ getRndForSpecifiedRoundAndBlock:
 						TxMsgHashes:   msg.Message.TxMsgHashes,
 					},
 				}
-
-				hash, err := newRndMsg.Message.GetHash()
-				if err != nil {
-					s.GlobalService.Logger.Error("process - rnd processing - get hash", zap.Error(err))
-					return nil, err
-				}
-				newRndMsg.Message.Hash = hash
-
-				resp, err := utils.SignMessage(newRndMsg.Message, saiBTCAddress, s.BTCkeys.Private)
-				if err != nil {
-					s.GlobalService.Logger.Error("process - rnd processing - sign message", zap.Error(err))
-					return nil, err
-				}
-
-				newRndMsg.Message.SenderSignature = resp.Signature
-
-				err, _ = s.Storage.Put(RndMessagesPoolCol, newRndMsg, storageToken)
-				if err != nil {
-					s.GlobalService.Logger.Error("process - rnd processing - put to db", zap.Error(err))
-					return nil, err
-				}
-				s.GlobalService.Logger.Debug("process - rnd - rnd != msg.Rnd - sum rnd - put to db", zap.Int64("rnd", newRndMsg.Message.Rnd), zap.Int("round", newRndMsg.Message.Round))
-
 			}
+			hash, err := newRndMsg.Message.GetHash()
+			if err != nil {
+				s.GlobalService.Logger.Error("process - rnd processing - get hash", zap.Error(err))
+				return nil, err
+			}
+			newRndMsg.Message.Hash = hash
+
+			resp, err := utils.SignMessage(newRndMsg.Message, saiBTCAddress, s.BTCkeys.Private)
+			if err != nil {
+				s.GlobalService.Logger.Error("process - rnd processing - sign message", zap.Error(err))
+				return nil, err
+			}
+
+			newRndMsg.Message.SenderSignature = resp.Signature
+
+			err, _ = s.Storage.Put(RndMessagesPoolCol, newRndMsg, storageToken)
+			if err != nil {
+				s.GlobalService.Logger.Error("process - rnd processing - put to db", zap.Error(err))
+				return nil, err
+			}
+			s.GlobalService.Logger.Debug("process - rnd - rnd != msg.Rnd - sum rnd - put to db", zap.Int64("rnd", newRndMsg.Message.Rnd), zap.Int("round", newRndMsg.Message.Round))
+
 			err = s.broadcastMsg(newRndMsg.Message, saiP2pAddress)
 			if err != nil {
 				s.GlobalService.Logger.Error("processing - rnd processing - broadcast msg", zap.Error(err))

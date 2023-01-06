@@ -142,15 +142,15 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 			}
 			Service.GlobalService.Logger.Debug("ConsensusMsg was saved in ConsensusPool storage", zap.String("hash", msg.Hash))
 			continue
-		case *models.BlockConsensusMessage:
-			msg := data.(*models.BlockConsensusMessage)
+		case *models.Block:
+			msg := data.(*models.Block)
 			Service.GlobalService.Logger.Debug("handlers - handleMessage", zap.String("type", msg.Type), zap.Any("msg", msg)) // DEBUG
 			err := msg.Validate()
 			if err != nil {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - consensusMsg - validate", zap.Error(err))
 				continue
 			}
-			err = utils.ValidateSignature(msg, saiBtcAddress, msg.Block.SenderAddress, msg.Block.SenderSignature)
+			err = utils.ValidateSignature(msg, saiBtcAddress, msg.SenderAddress, msg.SenderSignature)
 			if err != nil {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - consensusMsg - validate signature ", zap.Error(err))
 				continue
@@ -164,7 +164,7 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 			}
 
 			if !s.IsInitialized {
-				Service.GlobalService.Logger.Debug("handlers - handleMessage - not initialized - put to candidates", zap.Int("block_number", msg.Block.Number), zap.String("hash", msg.BlockHash)) // DEBUG
+				Service.GlobalService.Logger.Debug("handlers - handleMessage - not initialized - put to candidates", zap.Int("block_number", msg.Number), zap.String("hash", msg.BlockHash)) // DEBUG
 				err, _ = s.Storage.Put(BlockCandidatesCol, msg, storageToken)
 				if err != nil {
 					Service.GlobalService.Logger.Error("listenFromSaiP2P - initial block consensus msg - put to storage", zap.Error(err))
@@ -220,10 +220,10 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 }
 
 // handle BlockConsensusMsg
-func (s *InternalService) handleBlockConsensusMsg(saiBTCaddress, saiP2pProxyAddress, storageToken string, msg *models.BlockConsensusMessage, saiP2pAddress string) error {
-	s.GlobalService.Logger.Debug("chain - handle block consensus - incoming block", zap.Int("block_number", msg.Block.Number), zap.Int("votes", msg.Votes), zap.String("hash", msg.BlockHash), zap.Strings("addresses", msg.VotedAddresses))
+func (s *InternalService) handleBlockConsensusMsg(saiBTCaddress, saiP2pProxyAddress, storageToken string, msg *models.Block, saiP2pAddress string) error {
+	s.GlobalService.Logger.Debug("chain - handle block consensus - incoming block", zap.Int("block_number", msg.Number), zap.String("hash", msg.BlockHash))
 	// Get Block N
-	err, result := s.Storage.Get(blockchainCol, bson.M{"block.number": msg.Block.Number}, bson.M{}, storageToken)
+	err, result := s.Storage.Get(blockchainCol, bson.M{"block.number": msg.Number}, bson.M{}, storageToken)
 	if err != nil {
 		s.GlobalService.Logger.Error("handleBlockConsensusMsg - get block N ", zap.Error(err))
 		return err
@@ -231,7 +231,7 @@ func (s *InternalService) handleBlockConsensusMsg(saiBTCaddress, saiP2pProxyAddr
 
 	// if there is no such block - go futher (compare block hash)
 	if len(result) == 2 {
-		s.GlobalService.Logger.Debug("chain - handle block consensus - no block found in blockchain", zap.Int("block_number", msg.Block.Number), zap.Int("votes", msg.Votes), zap.String("hash", msg.BlockHash), zap.Strings("addresses", msg.VotedAddresses))
+		s.GlobalService.Logger.Debug("chain - handle block consensus - no block found in blockchain", zap.Int("block_number", msg.Number), zap.String("hash", msg.BlockHash), zap.String("hash", msg.BlockHash))
 		return s.handleBlockCandidate(msg, saiP2pProxyAddress, saiP2pAddress, storageToken)
 	}
 
@@ -249,18 +249,10 @@ func (s *InternalService) handleBlockConsensusMsg(saiBTCaddress, saiP2pProxyAddr
 	}
 
 	block := blocks[0]
-	s.GlobalService.Logger.Debug("chain - handle block consensus - got block from blockchain with such hash", zap.Int("block_number", block.Block.Number), zap.Int("votes", block.Votes), zap.String("hash", block.BlockHash), zap.Strings("addresses", block.VotedAddresses))
+	s.GlobalService.Logger.Debug("chain - handle block consensus - got block from blockchain with such hash", zap.Int("block_number", block.Block.Number), zap.Int("votes", block.Votes), zap.String("hash", block.BlockHash))
 
 	if block.BlockHash == msg.BlockHash {
-		block := s.getFilteredBlockConsensus(msg, &block)
-
-		if block == nil {
-			s.GlobalService.Logger.Debug("chain - handleBlockConsensus - filteredBlock is null")
-			return nil
-		}
-		s.GlobalService.Logger.Debug("chain - handle block consensus - msg.Hash==block.Hash = block after updating", zap.Int("block_number", block.Block.Number), zap.Int("votes", block.Votes), zap.String("hash", block.BlockHash), zap.Strings("addresses", block.VotedAddresses))
-
-		err := s.addVotesToBlock(block, storageToken)
+		err := s.addVotesToBlock(msg, &block, storageToken)
 		if err != nil {
 			s.GlobalService.Logger.Error("handleBlockConsensusMsg - blockHash = msgBlockHash - add votes to block", zap.Error(err))
 			return err
@@ -273,9 +265,9 @@ func (s *InternalService) handleBlockConsensusMsg(saiBTCaddress, saiP2pProxyAddr
 }
 
 // validate block consensus message
-func (s *InternalService) validateBlockConsensusMsg(msg *models.BlockConsensusMessage) bool {
+func (s *InternalService) validateBlockConsensusMsg(msg *models.Block) bool {
 	for _, validator := range s.Validators {
-		if validator == msg.Block.SenderAddress {
+		if validator == msg.SenderAddress {
 			return true
 		}
 	}
@@ -314,9 +306,11 @@ func (s *InternalService) getBlockCandidate(blockHash string, storageToken strin
 }
 
 // add vote to block N
-func (s *InternalService) addVotesToBlock(block *models.BlockConsensusMessage, storageToken string) error {
-	filter := bson.M{"block.number": block.Block.Number}
-	update := bson.M{"votes": block.Votes, "voted_signatures": block.Signatures, "voted_addresses": block.VotedAddresses}
+func (s *InternalService) addVotesToBlock(msg *models.Block, block *models.BlockConsensusMessage, storageToken string) error {
+	newSignatures := make([]string, 0)
+	newSignatures = append(block.Signatures, msg.SenderAddress)
+	filter := bson.M{"block.number": block.Block.Number, "block_hash": block.BlockHash}
+	update := bson.M{"votes": block.Votes + 1, "voted_signatures": newSignatures}
 	err, _ := s.Storage.Update(blockchainCol, filter, update, storageToken)
 	return err
 }
@@ -324,15 +318,28 @@ func (s *InternalService) addVotesToBlock(block *models.BlockConsensusMessage, s
 // update blockchain
 // 1. get missed blocks from connected nodes
 // 2. put missed and chosen blocks to blockchain collection
-func (s *InternalService) updateBlockchain(msg *models.BlockConsensusMessage, storageToken, saiP2pProxyAddress, saiP2pAddress string) error {
-	resultBlocks, err := s.GetMissedBlocks(msg.Block.Number, storageToken)
+func (s *InternalService) updateBlockchain(msg *models.Block, storageToken, saiP2pProxyAddress, saiP2pAddress string) error {
+	resultBlocks, err := s.GetMissedBlocks(msg.Number, storageToken)
 	if err != nil {
 		s.GlobalService.Logger.Error("handleBlockConsensusMsg - blockHash = msgBlockHash - sendDirectGetBlockMessage", zap.Error(err))
 		return err
 	}
 	s.GlobalService.Logger.Debug("chain - block consensus msg - update blockchain - blocks to put", zap.Any("blocks", resultBlocks))
 	for _, block := range resultBlocks {
-		err, _ = s.Storage.Put(blockchainCol, block, storageToken)
+		err, _ = s.Storage.Put(blockchainCol, &models.BlockConsensusMessage{
+			Votes:     block.Votes,
+			BlockHash: block.BlockHash,
+			Block: &models.Block{
+				Type:              models.BlockConsensusMsgType,
+				Number:            block.Block.Number,
+				PreviousBlockHash: block.Block.PreviousBlockHash,
+				BlockHash:         block.Block.BlockHash,
+				BaseRND:           block.Block.BaseRND,
+				Messages:          block.Block.Messages,
+				SenderAddress:     block.Block.SenderAddress,
+				SenderSignature:   block.Block.SenderSignature,
+			},
+		}, storageToken)
 		if err != nil {
 			return err
 		}
@@ -343,7 +350,7 @@ func (s *InternalService) updateBlockchain(msg *models.BlockConsensusMessage, st
 // Block candidate logic
 // 1. Get block candidate from db
 // 2. update blockchain if blockCandidate votes < incoming msg.Votes
-func (s *InternalService) handleBlockCandidate(msg *models.BlockConsensusMessage, saiP2pProxyAddress, saiP2pAddress, storageToken string) error {
+func (s *InternalService) handleBlockCandidate(msg *models.Block, saiP2pProxyAddress, saiP2pAddress, storageToken string) error {
 	requiredVotes := math.Ceil(float64(len(s.Validators)) * 7 / 10)
 
 	blockCandidate, err := s.getBlockCandidate(msg.BlockHash, storageToken)
@@ -353,16 +360,23 @@ func (s *InternalService) handleBlockCandidate(msg *models.BlockConsensusMessage
 	}
 
 	if blockCandidate == nil {
-		// if float64(msg.Votes) >= requiredVotes {
-		// 	err, _ := s.Storage.Put(blockchainCol, msg, storageToken)
-		// 	if err != nil {
-		// 		s.GlobalService.Logger.Error("handleBlockConsensusMsg - blockHash = msgBlockHash - insert block to BlockCandidates collection", zap.Error(err))
-		// 		return err
-		// 	}
-		// 	return nil
-		// } else {
-		s.GlobalService.Logger.Debug("chain - handleBlockConsensusMsg - handleBlockCandidate - blockCandidate not found - put to candidates", zap.Int("block_number", msg.Block.Number), zap.String("hash", msg.BlockHash)) // DEBUG
-		err, _ := s.Storage.Put(BlockCandidatesCol, msg, storageToken)
+		blockCandidate = &models.BlockConsensusMessage{
+			Votes:      1,
+			BlockHash:  msg.BlockHash,
+			Signatures: append(blockCandidate.Signatures, msg.SenderSignature),
+			Block: &models.Block{
+				Type:              models.BlockConsensusMsgType,
+				Number:            msg.Number,
+				PreviousBlockHash: msg.PreviousBlockHash,
+				SenderAddress:     msg.SenderAddress,
+				SenderSignature:   msg.SenderSignature,
+				BlockHash:         msg.BlockHash,
+				BaseRND:           msg.BaseRND,
+				Messages:          msg.Messages,
+			},
+		}
+		s.GlobalService.Logger.Debug("chain - handleBlockConsensusMsg - handleBlockCandidate - blockCandidate not found - put to candidates", zap.Int("block_number", msg.Number), zap.String("hash", msg.BlockHash)) // DEBUG
+		err, _ := s.Storage.Put(BlockCandidatesCol, blockCandidate, storageToken)
 		if err != nil {
 			s.GlobalService.Logger.Error("handleBlockConsensusMsg - blockHash = msgBlockHash - insert block to BlockChain collection", zap.Error(err))
 			return err
@@ -370,24 +384,10 @@ func (s *InternalService) handleBlockCandidate(msg *models.BlockConsensusMessage
 		return nil
 	}
 
-	btcResp, err := utils.SignMessage(blockCandidate, s.GlobalService.Configuration["saiBTC_address"].(string), Service.BTCkeys.Private)
-	if err != nil {
-		Service.GlobalService.Logger.Error("chain - handleBlockConsensusMsg - handleBlockCandidate - signMessage", zap.Error(err))
-		return err
-	}
-
 	blockCandidate.Votes += 1
-	blockCandidate.VotedAddresses = append(blockCandidate.VotedAddresses, s.BTCkeys.Address)
-	blockCandidate.Signatures = append(blockCandidate.Signatures, btcResp.Signature)
+	blockCandidate.Signatures = append(blockCandidate.Signatures, msg.SenderSignature)
 
-	blockCandidate = s.getFilteredBlockConsensus(msg, blockCandidate)
-
-	if blockCandidate == nil {
-		s.GlobalService.Logger.Debug("chain - handleBlockConsensus - filteredBlock is null")
-		return nil
-	}
-
-	s.GlobalService.Logger.Debug("chain - handleBlockConsensus - handleBlockCandidate - candidate after voting", zap.Int("block_number", blockCandidate.Block.Number), zap.String("block_hash", blockCandidate.BlockHash), zap.Int("votes", blockCandidate.Votes), zap.Strings("addresses", blockCandidate.VotedAddresses))
+	s.GlobalService.Logger.Debug("chain - handleBlockConsensus - handleBlockCandidate - candidate after voting", zap.Int("block_number", blockCandidate.Block.Number), zap.String("block_hash", blockCandidate.BlockHash), zap.Int("votes", blockCandidate.Votes))
 
 	if float64(blockCandidate.Votes) >= requiredVotes {
 		s.GlobalService.Logger.Debug("chain - handle block consensus - handle - block candidate - sync block")
@@ -399,15 +399,16 @@ func (s *InternalService) handleBlockCandidate(msg *models.BlockConsensusMessage
 
 		s.GlobalService.Logger.Sugar().Debugf("block candidate was inserted to blockchain collection, blockCandidate : %+v\n", blockCandidate) // DEBUG
 
-		err = s.updateBlockchain(blockCandidate, saiP2pProxyAddress, storageToken, saiP2pAddress)
+		err = s.updateBlockchain(blockCandidate.Block, saiP2pProxyAddress, storageToken, saiP2pAddress)
 		if err != nil {
 			s.GlobalService.Logger.Error("handleBlockConsensusMsg - blockHash = msgBlockHash - update blockchain", zap.Error(err))
 			return err
 		}
-	}
-	s.GlobalService.Logger.Debug("chain - get block consensus msg - handle block candidate - terminate (less than 70 percent votes got", zap.Int("block candidate votes", blockCandidate.Votes), zap.Float64("required votes", requiredVotes)) // DEBUG
-	return nil
+	} else {
+		s.GlobalService.Logger.Debug("chain - get block consensus msg - handle block candidate - terminate (less than 70 percent votes got", zap.Int("block candidate votes", blockCandidate.Votes), zap.Float64("required votes", requiredVotes)) // DEBUG
 
+	}
+	return nil
 }
 
 // get blockchain missed blocks

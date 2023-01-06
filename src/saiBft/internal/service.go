@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"context"
 	"sync"
 
 	"github.com/iamthe1whoknocks/bft/models"
@@ -32,6 +33,11 @@ func Init(svc *saiService.Service) {
 	Service.Handler[HandleTxFromCli.Name] = HandleTxFromCli
 	Service.Handler[HandleMessage.Name] = HandleMessage
 	Service.Handler[CreateBTCKeys.Name] = CreateBTCKeys
+
+	// setting values to core context
+	Service.SetContext(btckeys)
+	svc.Logger.Sugar().Debugf("main - init - core context :[%+v]", Service.CoreCtx)
+
 }
 
 type InternalService struct {
@@ -51,6 +57,7 @@ type InternalService struct {
 	MissedBlocksLinkCh   chan string   //chan to get link from p2pProxy handler
 	TxHandlerSyncCh      chan struct{} // chan to handle tx via http/cli
 	IsValidator          bool          //is node a validator
+	CoreCtx              context.Context
 }
 
 // global handler for registering handlers

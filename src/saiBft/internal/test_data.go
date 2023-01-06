@@ -2,7 +2,6 @@ package internal
 
 import (
 	"github.com/iamthe1whoknocks/bft/models"
-	"github.com/iamthe1whoknocks/bft/utils"
 	"go.uber.org/zap"
 )
 
@@ -28,7 +27,7 @@ func (s *InternalService) saveTestTx(saiBtcAddress, storageToken, saiP2PAddress 
 	testTxMsg.Tx.MessageHash = testTxHash
 	testTxMsg.MessageHash = testTxHash
 
-	resp, err := utils.SignMessage(testTxMsg, saiBtcAddress, s.BTCkeys.Private)
+	resp, err := models.SignMessage(testTxMsg, saiBtcAddress, s.BTCkeys.Private)
 	if err != nil {
 		s.GlobalService.Logger.Fatal("processing - sign test tx error", zap.Error(err))
 	}
@@ -63,7 +62,7 @@ func (s *InternalService) saveTestConsensusMsg(saiBtcAddress, storageToken, send
 
 	testConsensusMsg.Hash = testConsensusHash
 
-	resp, err := utils.SignMessage(testConsensusMsg, saiBtcAddress, s.BTCkeys.Private)
+	resp, err := models.SignMessage(testConsensusMsg, saiBtcAddress, s.BTCkeys.Private)
 	if err != nil {
 		s.GlobalService.Logger.Fatal("processing - sign test consensus error", zap.Error(err))
 	}
@@ -98,7 +97,7 @@ func (s *InternalService) saveTestTx2(saiBtcAddress, storageToken, saiP2PAddress
 	testTxMsg.Tx.MessageHash = testTxHash
 	testTxMsg.MessageHash = testTxHash
 
-	resp, err := utils.SignMessage(testTxMsg, saiBtcAddress, s.BTCkeys.Private)
+	resp, err := models.SignMessage(testTxMsg, saiBtcAddress, s.BTCkeys.Private)
 	if err != nil {
 		s.GlobalService.Logger.Fatal("processing - sign test tx error", zap.Error(err))
 	}

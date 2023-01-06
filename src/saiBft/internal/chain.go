@@ -59,7 +59,7 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - transactionMsg - validate", zap.Error(err))
 				continue
 			}
-			err = utils.ValidateSignature(msg, saiBtcAddress, msg.Tx.SenderAddress, msg.Tx.SenderSignature)
+			err = models.ValidateSignature(msg, saiBtcAddress, msg.Tx.SenderAddress, msg.Tx.SenderSignature)
 			if err != nil {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - tx msg - validate signature ", zap.Error(err))
 				continue
@@ -90,7 +90,7 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - transactionMsg - validate", zap.Error(err))
 				continue
 			}
-			err = utils.ValidateSignature(msg, saiBtcAddress, msg.Tx.SenderAddress, msg.Tx.SenderSignature)
+			err = models.ValidateSignature(msg, saiBtcAddress, msg.Tx.SenderAddress, msg.Tx.SenderSignature)
 			if err != nil {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - tx msg - validate signature ", zap.Error(err))
 				continue
@@ -130,7 +130,7 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - consensusMsg - validate", zap.Error(err))
 				continue
 			}
-			err = utils.ValidateSignature(msg, saiBtcAddress, msg.SenderAddress, msg.Signature)
+			err = models.ValidateSignature(msg, saiBtcAddress, msg.SenderAddress, msg.Signature)
 			if err != nil {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - consensusMsg - validate signature ", zap.Error(err))
 				continue
@@ -150,7 +150,7 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - consensusMsg - validate", zap.Error(err))
 				continue
 			}
-			err = utils.ValidateSignature(msg, saiBtcAddress, msg.SenderAddress, msg.SenderSignature)
+			err = models.ValidateSignature(msg, saiBtcAddress, msg.SenderAddress, msg.SenderSignature)
 			if err != nil {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - consensusMsg - validate signature ", zap.Error(err))
 				continue
@@ -198,7 +198,7 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - rndMessage - validate", zap.Error(err))
 				continue
 			}
-			err = utils.ValidateSignature(msg, saiBtcAddress, msg.SenderAddress, msg.SenderSignature)
+			err = models.ValidateSignature(msg, saiBtcAddress, msg.SenderAddress, msg.SenderSignature)
 			if err != nil {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - rndMessage - validate signature ", zap.Error(err))
 				continue
@@ -464,7 +464,7 @@ func (s *InternalService) GetMissedBlocks(blockNumber int, storageToken string) 
 	resultBlocks := make([]*models.BlockConsensusMessage, 0)
 
 	for _, node := range connectedNodes {
-		err := utils.SendDirectGetBlockMsg(node, syncRequest, saiP2Paddress)
+		err := models.SendDirectGetBlockMsg(node, syncRequest, saiP2Paddress)
 		if err != nil {
 			s.GlobalService.Logger.Error("chain - GetMissedBlocks - sendDirectGetBlockMsg", zap.String("node", node), zap.Error(err))
 			continue

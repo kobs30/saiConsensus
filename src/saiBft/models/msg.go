@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 
 	valid "github.com/asaskevich/govalidator"
 )
@@ -154,4 +155,17 @@ func (m *RNDMessage) GetHash() (string, error) {
 
 	hash := sha256.Sum256(b)
 	return hex.EncodeToString(hash[:]), nil
+}
+
+// detect message type from saiP2p data input
+func DetectMsgTypeFromMap(m map[string]interface{}) (string, error) {
+	if _, ok := m["block_number"]; ok {
+		return ConsensusMsgType, nil
+	} else if _, ok := m["block_hash"]; ok {
+		return BlockConsensusMsgType, nil
+	} else if _, ok := m["message"]; ok {
+		return TransactionMsgType, nil
+	} else {
+		return "", errors.New("unknown msg type")
+	}
 }

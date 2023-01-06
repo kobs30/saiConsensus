@@ -9,7 +9,6 @@ import (
 	"reflect"
 
 	"github.com/iamthe1whoknocks/bft/models"
-	"github.com/iamthe1whoknocks/bft/utils"
 	"github.com/iamthe1whoknocks/saiService"
 	"go.uber.org/zap"
 )
@@ -128,7 +127,7 @@ var HandleTxFromCli = saiService.HandlerElement{
 		}
 		transactionMessage.Tx.MessageHash = hash
 
-		btcResp, err := utils.SignMessage(transactionMessage, saiBtcAddress, Service.BTCkeys.Private)
+		btcResp, err := models.SignMessage(transactionMessage, saiBtcAddress, Service.BTCkeys.Private)
 		if err != nil {
 			Service.GlobalService.Logger.Error("handlers  - tx - sign tx message", zap.Error(err))
 			return nil, fmt.Errorf("handlers  - tx - sign tx message: %w", err)
@@ -253,7 +252,7 @@ var CreateBTCKeys = saiService.HandlerElement{
 			Service.GlobalService.Logger.Fatal("wrong type of saiBTC_address value in config")
 		}
 
-		btcKeys, body, err := utils.GetBtcKeys(saiBtcAddress)
+		btcKeys, body, err := models.GetBtcKeys(saiBtcAddress)
 		if err != nil {
 			Service.GlobalService.Logger.Error("handlers - create btc keys  - get btc keys", zap.Error(err))
 			return nil, err

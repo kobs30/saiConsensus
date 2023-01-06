@@ -1,6 +1,17 @@
 package models
 
-import valid "github.com/asaskevich/govalidator"
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"reflect"
+	"strings"
+
+	valid "github.com/asaskevich/govalidator"
+	"github.com/iamthe1whoknocks/bft/utils"
+)
 
 // btc keys got from saiBTC
 type BtcKeys struct {
@@ -26,4 +37,216 @@ type ValidateSignatureResponse struct {
 type SignMessageResponse struct {
 	Message   string `json:"message"`
 	Signature string `json:"signature"`
+}
+
+// validate message signature
+func ValidateSignature(msg interface{}, address, SenderAddress, signature string) (err error) {
+	b := make([]byte, 0)
+	switch msg.(type) {
+	case *Block:
+		BCMsg := msg.(*Block)
+		b, err = json.Marshal(&Block{
+			Number:            BCMsg.Number,
+			PreviousBlockHash: BCMsg.PreviousBlockHash,
+			Messages:          BCMsg.Messages,
+			SenderAddress:     BCMsg.SenderAddress,
+		})
+		if err != nil {
+			return fmt.Errorf(" marshal blockConsensusMessage : %w", err)
+		}
+	case *ConsensusMessage:
+		cMsg := msg.(*ConsensusMessage)
+		b, err = json.Marshal(&ConsensusMessage{
+			SenderAddress: cMsg.SenderAddress,
+			BlockNumber:   cMsg.BlockNumber,
+			Round:         cMsg.Round,
+			Messages:      cMsg.Messages,
+		})
+		if err != nil {
+			return fmt.Errorf("marshal ConsensusMessage : %w", err)
+		}
+	case *TransactionMessage:
+		txMsg := msg.(*TransactionMessage)
+		b, err = json.Marshal(&Tx{
+			SenderAddress: txMsg.Tx.SenderAddress,
+			Message:       txMsg.Tx.Message,
+		})
+		if err != nil {
+			return fmt.Errorf("marshal TransactionMessage : %w", err)
+		}
+	case *RNDMessage:
+		rndMsg := msg.(*RNDMessage)
+		b, err = json.Marshal(&RNDMessage{
+			SenderAddress: rndMsg.SenderAddress,
+			BlockNumber:   rndMsg.BlockNumber,
+			Round:         rndMsg.Round,
+			Rnd:           rndMsg.Rnd,
+			TxMsgHashes:   rndMsg.TxMsgHashes,
+		})
+	default:
+		return fmt.Errorf("unknown type of message, incoming type : %+v\n", reflect.TypeOf(msg))
+	}
+	preparedString := fmt.Sprintf("method=validateSignature&a=%s&signature=%s&message=%s", SenderAddress, signature, string(b))
+	requestBody := strings.NewReader(preparedString)
+
+	body, err := utils.SendRequest(address, requestBody)
+	if err != nil {
+		return fmt.Errorf("sendRequest to saiBTC : %w", err)
+	}
+
+	resp := ValidateSignatureResponse{}
+
+	err = json.Unmarshal(body, &resp)
+	if err != nil {
+		return fmt.Errorf("unmarshal response from saiBTC  : %w", err)
+	}
+	if resp.Signature == "valid" {
+		return nil
+	}
+	return errors.New("Signature is not valid\n")
+}
+
+// saiBTC sign message method
+func SignMessage(msg interface{}, address, privateKey string) (resp *SignMessageResponse, err error) {
+	var preparedString string
+	switch msg.(type) {
+	case *Block:
+		BCMsg := msg.(*Block)
+		data, err := json.Marshal(&Block{
+			Number:            BCMsg.Number,
+			PreviousBlockHash: BCMsg.PreviousBlockHash,
+			Messages:          BCMsg.Messages,
+			SenderAddress:     BCMsg.SenderAddress,
+		})
+		if err != nil {
+			return nil, err
+		}
+		preparedString = fmt.Sprintf("method=signMessage&p=%s&message=%s", privateKey, string(data))
+	case *ConsensusMessage:
+		cMsg := msg.(*ConsensusMessage)
+		data, err := json.Marshal(&ConsensusMessage{
+			SenderAddress: cMsg.SenderAddress,
+			BlockNumber:   cMsg.BlockNumber,
+			Round:         cMsg.Round,
+			Messages:      cMsg.Messages,
+		})
+		if err != nil {
+			return nil, err
+		}
+		preparedString = fmt.Sprintf("method=signMessage&p=%s&message=%s", privateKey, string(data))
+	case *TransactionMessage:
+		TxMsg := msg.(*TransactionMessage)
+		data, err := json.Marshal(&Tx{
+			SenderAddress: TxMsg.Tx.SenderAddress,
+			Message:       TxMsg.Tx.Message,
+		})
+		if err != nil {
+			return nil, err
+		}
+		preparedString = fmt.Sprintf("method=signMessage&p=%s&message=%s", privateKey, string(data))
+	case *Tx:
+		TxMsg := msg.(*Tx)
+		data, err := json.Marshal(&Tx{
+			SenderAddress: TxMsg.SenderAddress,
+			Message:       TxMsg.Message,
+		})
+		if err != nil {
+			return nil, err
+		}
+		preparedString = fmt.Sprintf("method=signMessage&p=%s&message=%s", privateKey, string(data))
+	case *RNDMessage:
+		rndMsg := msg.(*RNDMessage)
+		data, err := json.Marshal(&RNDMessage{
+			SenderAddress: rndMsg.SenderAddress,
+			BlockNumber:   rndMsg.BlockNumber,
+			Round:         rndMsg.Round,
+			Rnd:           rndMsg.Rnd,
+			TxMsgHashes:   rndMsg.TxMsgHashes,
+		})
+		if err != nil {
+			return nil, err
+		}
+		preparedString = fmt.Sprintf("method=signMessage&p=%s&message=%s", privateKey, string(data))
+	default:
+		return nil, errors.New("unknown type of message")
+	}
+	requestBody := strings.NewReader(preparedString)
+
+	body, err := utils.SendRequest(address, requestBody)
+	if err != nil {
+		return nil, fmt.Errorf("sendRequest to saiBTC : %w", err)
+	}
+
+	response := SignMessageResponse{}
+
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal response from saiBTC  : %w\n response body : %s", err, string(body))
+	}
+
+	return &response, nil
+}
+
+// get btc keys
+func GetBtcKeys(address string) (*BtcKeys, []byte, error) {
+	requestBody := strings.NewReader("method=generateBTC")
+
+	body, err := utils.SendRequest(address, requestBody)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	keys := BtcKeys{}
+
+	err = json.Unmarshal(body, &keys)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &keys, body, nil
+}
+
+func GetBTCkeys(fileStr, saiBTCaddress string) (*BtcKeys, error) {
+	file, err := os.OpenFile(fileStr, os.O_CREATE|os.O_RDWR, 0666)
+	if err != nil {
+		return nil, fmt.Errorf("processing - open key btc file - %w", err)
+	}
+
+	data, err := ioutil.ReadFile(fileStr)
+	if err != nil {
+		err = fmt.Errorf("processing - read key btc file - %w", err)
+		return nil, err
+	}
+	btcKeys := BtcKeys{}
+
+	err = json.Unmarshal(data, &btcKeys)
+	if err != nil {
+		btcKeys, body, err := GetBtcKeys(saiBTCaddress)
+		if err != nil {
+			err = fmt.Errorf("get btc keys - get btc keys - %w", err)
+			return nil, err
+		}
+		_, err = file.Write(body)
+		if err != nil {
+			err = fmt.Errorf("get btc keys - write btc keys to file - %w", err)
+			return nil, err
+		}
+		return btcKeys, nil
+	} else {
+		err = btcKeys.Validate()
+		if err != nil {
+			btcKeys, body, err := GetBtcKeys(saiBTCaddress)
+			if err != nil {
+				err = fmt.Errorf("get btc keys - get btc keys - %w", err)
+				return nil, err
+			}
+			_, err = file.Write(body)
+			if err != nil {
+				err = fmt.Errorf("get btc keys - write btc keys to file - %w", err)
+				return nil, err
+			}
+			return btcKeys, nil
+		}
+		return &btcKeys, nil
+	}
 }

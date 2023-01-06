@@ -82,7 +82,7 @@ func (s *InternalService) rndProcessing(saiBTCAddress, saiP2pAddress, storageTok
 	}
 	rndMsg.Message.Hash = hash
 
-	resp, err := utils.SignMessage(rndMsg.Message, saiBTCAddress, s.BTCkeys.Private)
+	resp, err := models.SignMessage(rndMsg.Message, saiBTCAddress, s.BTCkeys.Private)
 	if err != nil {
 		s.GlobalService.Logger.Error("process - rnd processing - sign message", zap.Error(err))
 		return nil, err
@@ -193,7 +193,7 @@ getRndForSpecifiedRoundAndBlock:
 			}
 			newRndMsg.Message.Hash = hash
 
-			resp, err := utils.SignMessage(newRndMsg.Message, saiBTCAddress, s.BTCkeys.Private)
+			resp, err := models.SignMessage(newRndMsg.Message, saiBTCAddress, s.BTCkeys.Private)
 			if err != nil {
 				s.GlobalService.Logger.Error("process - rnd processing - sign message", zap.Error(err))
 				return nil, err

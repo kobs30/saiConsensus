@@ -1,9 +1,11 @@
 package models
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 
 	valid "github.com/asaskevich/govalidator"
 )
@@ -73,43 +75,31 @@ func (m *TransactionMessage) GetExecutedHash() error {
 	return nil
 }
 
-// func (m *TransactionMessage) CreateTxMsg(txMsg []byte) (*TransactionMessage, error) {
-// 	saiBtcAddress, ok := Service.GlobalService.Configuration["saiBTC_address"].(string)
-// 	if !ok {
-// 		Service.GlobalService.Logger.Fatal("wrong type of saiBTC_address value in config")
-// 	}
+func (m *TransactionMessage) CreateTxMsg(ctx context.Context, txMsg []byte) (*TransactionMessage, error) {
 
-// 	btcKeys := utils.GetBTCkeys
-// 	Service.BTCkeys = btckeys
+	txMsgBytes, err := json.Marshal(txMsg)
+	if err != nil {
+		return nil, fmt.Errorf("handlers - createTx  -  marshal tx msg: %w", err)
+	}
+	transactionMessage := &TransactionMessage{
+		Tx: &Tx{
+			Type:          TransactionMsgType,
+			SenderAddress: ctx.Value("saiBTCKeys").(*BtcKeys).Address,
+			Message:       string(txMsgBytes),
+		},
+	}
 
-// 	txMsgBytes, err := json.Marshal(txMsg)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("handlers - tx  -  marshal tx msg: %w", err)
-// 	}
-// 	transactionMessage := &TransactionMessage{
-// 		Tx: &Tx{
-// 			Type:          TransactionMsgType,
-// 			SenderAddress: Service.BTCkeys.Address,
-// 			Message:       string(txMsgBytes),
-// 		},
-// 	}
+	hash, err := transactionMessage.Tx.GetHash()
+	if err != nil {
+		return nil, fmt.Errorf("handlers  - createTx - count tx message hash: %w", err)
+	}
+	transactionMessage.Tx.MessageHash = hash
 
-// 	hash, err := transactionMessage.Tx.GetHash()
-// 	if err != nil {
-// 		Service.GlobalService.Logger.Error("handlers  - tx - count tx message hash", zap.Error(err))
-// 		return nil, fmt.Errorf("handlers  - tx - count tx message hash: %w", err)
-// 	}
-// 	transactionMessage.Tx.MessageHash = hash
+	btcResp, err := SignMessage(transactionMessage, ctx.Value("saiBTC_address").(string), ctx.Value("saiBTCKeys").(*BtcKeys).Private)
+	if err != nil {
+		return nil, fmt.Errorf("handlers  - createTx - sign tx message: %w", err)
+	}
+	transactionMessage.Tx.SenderSignature = btcResp.Signature
 
-// 	btcResp, err := utils.SignMessage(transactionMessage, saiBtcAddress, Service.BTCkeys.Private)
-// 	if err != nil {
-// 		Service.GlobalService.Logger.Error("handlers  - tx - sign tx message", zap.Error(err))
-// 		return nil, fmt.Errorf("handlers  - tx - sign tx message: %w", err)
-// 	}
-// 	transactionMessage.Tx.SenderSignature = btcResp.Signature
-
-// 	saiP2Paddress, ok := Service.GlobalService.Configuration["saiP2P_address"].(string)
-// 	if !ok {
-// 		Service.GlobalService.Logger.Fatal("processing - wrong type of saiP2P address value from config")
-// 	}
-// }
+	return transactionMessage, nil
+}

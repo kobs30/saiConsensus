@@ -1,53 +1,14 @@
 package utils
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
-
-	"github.com/iamthe1whoknocks/bft/models"
 )
-
-// send direct get block message to connected nodes
-func SendDirectGetBlockMsg(node string, req *models.SyncRequest, saiP2pAddress string) error {
-	data, err := json.Marshal(req)
-	if err != nil {
-		return fmt.Errorf("chain - sendDirectGetBlockMsg - marshal request : %w", err)
-	}
-
-	param := url.Values{}
-	param.Add("message", string(data))
-	param.Add("node", node)
-
-	postRequest, err := http.NewRequest("POST", saiP2pAddress+"/Send_message_to", strings.NewReader(param.Encode()))
-	if err != nil {
-		return fmt.Errorf("chain - sendDirectGetBlockMsg - create post request : %w", err)
-	}
-
-	postRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	client := http.Client{
-		Timeout: 10 * time.Second,
-	}
-
-	resp, err := client.Do(postRequest)
-	if err != nil {
-		return fmt.Errorf("chain - sendDirectGetBlockMsg - send post request : %w", err)
-	}
-
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("chain - sendDirectGetBlockMsg - send post request wrong response status code : %d", resp.StatusCode)
-	}
-
-	return nil
-
-}
 
 func GetConnectedNodesAddresses(saiP2Paddress string, blacklist []string) ([]string, error) {
 	client := http.Client{

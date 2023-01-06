@@ -363,7 +363,7 @@ func (s *InternalService) handleBlockCandidate(msg *models.Block, saiP2pProxyAdd
 		blockCandidate = &models.BlockConsensusMessage{
 			Votes:      1,
 			BlockHash:  msg.BlockHash,
-			Signatures: append(blockCandidate.Signatures, msg.SenderSignature),
+			Signatures: make([]string, 0),
 			Block: &models.Block{
 				Type:              models.BlockConsensusMsgType,
 				Number:            msg.Number,
@@ -375,7 +375,11 @@ func (s *InternalService) handleBlockCandidate(msg *models.Block, saiP2pProxyAdd
 				Messages:          msg.Messages,
 			},
 		}
+
+		blockCandidate.Signatures = append(blockCandidate.Signatures, msg.SenderSignature)
+
 		s.GlobalService.Logger.Debug("chain - handleBlockConsensusMsg - handleBlockCandidate - blockCandidate not found - put to candidates", zap.Int("block_number", msg.Number), zap.String("hash", msg.BlockHash)) // DEBUG
+
 		err, _ := s.Storage.Put(BlockCandidatesCol, blockCandidate, storageToken)
 		if err != nil {
 			s.GlobalService.Logger.Error("handleBlockConsensusMsg - blockHash = msgBlockHash - insert block to BlockChain collection", zap.Error(err))

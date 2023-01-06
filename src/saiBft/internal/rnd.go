@@ -60,7 +60,7 @@ func (s *InternalService) rndProcessing(saiBTCAddress, saiP2pAddress, storageTok
 	s.GlobalService.Logger.Debug("process - rnd processing", zap.Any("tx messages candidates", txMsgs), zap.Int("round", rndRound))
 
 	source := rand.New(rand.NewSource(time.Now().UnixNano()))
-	rnd := source.Int63n(1000)
+	rnd := source.Int63n(100)
 	s.GlobalService.Logger.Debug("rnd generated", zap.Int64("rnd", rnd))
 
 	rndMsg := &models.RND{

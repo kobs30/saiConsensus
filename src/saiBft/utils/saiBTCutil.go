@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"reflect"
 	"strings"
 	"time"
@@ -205,4 +206,46 @@ func SignMessage(msg interface{}, address, privateKey string) (resp *models.Sign
 	}
 
 	return &response, nil
+}
+
+func GetBTCkeys(fileStr, saiBTCaddress string) (*models.BtcKeys, error) {
+	file, err := os.OpenFile(fileStr, os.O_CREATE|os.O_RDWR, 0666)
+	if err != nil {
+		return nil, fmt.Errorf("processing - open key btc file - %w", err)
+	}
+
+	data, err := ioutil.ReadFile(fileStr)
+	if err != nil {
+		fmt.Errorf("processing - read key btc file - %w", err)
+	}
+	btcKeys := models.BtcKeys{}
+
+	err = json.Unmarshal(data, &btcKeys)
+	if err != nil {
+		fmt.Errorf("get btc keys - error unmarshal from file - %w", err)
+		btcKeys, body, err := GetBtcKeys(saiBTCaddress)
+		if err != nil {
+			fmt.Errorf("get btc keys - get btc keys - %w", err)
+		}
+		_, err = file.Write(body)
+		if err != nil {
+			fmt.Errorf("get btc keys - write btc keys to file - %w", err)
+		}
+		return btcKeys, nil
+	} else {
+		err = btcKeys.Validate()
+		if err != nil {
+			btcKeys, body, err := GetBtcKeys(saiBTCaddress)
+			if err != nil {
+				fmt.Errorf("get btc keys - get btc keys - %w", err)
+			}
+			_, err = file.Write(body)
+			if err != nil {
+				fmt.Errorf("get btc keys - write btc keys to file - %w", err)
+				return nil, err
+			}
+			return btcKeys, nil
+		}
+		return &btcKeys, nil
+	}
 }

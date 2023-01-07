@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install wget -y
 
 RUN chmod +x ./sai-bft
 #CMD ./sai-bft tx send3 from3 to3 amount3 denom3
+#CMD ./sai-bft get-tx send from to amount denom
 CMD ./sai-bft start
 
 EXPOSE 8017

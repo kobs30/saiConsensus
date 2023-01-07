@@ -161,7 +161,22 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 
 			if !s.IsInitialized {
 				Service.GlobalService.Logger.Debug("handlers - handleMessage - not initialized - put to candidates", zap.Int("block_number", msg.Number), zap.String("hash", msg.BlockHash)) // DEBUG
-				err, _ = s.Storage.Put(BlockCandidatesCol, msg, storageToken)
+				votedSignatures := make([]string, 0)
+				err, _ = s.Storage.Put(BlockCandidatesCol, &models.BlockConsensusMessage{
+					Votes:      1,
+					BlockHash:  msg.BlockHash,
+					Signatures: append(votedSignatures, msg.SenderSignature),
+					Block: &models.Block{
+						Type:              models.BlockConsensusMsgType,
+						Number:            msg.Number,
+						PreviousBlockHash: msg.PreviousBlockHash,
+						BlockHash:         msg.BlockHash,
+						BaseRND:           msg.BaseRND,
+						Messages:          msg.Messages,
+						SenderAddress:     msg.SenderAddress,
+						SenderSignature:   msg.SenderSignature,
+					},
+				}, storageToken)
 				if err != nil {
 					Service.GlobalService.Logger.Error("listenFromSaiP2P - initial block consensus msg - put to storage", zap.Error(err))
 					continue
@@ -322,20 +337,7 @@ func (s *InternalService) updateBlockchain(msg *models.Block, storageToken, saiP
 	}
 	s.GlobalService.Logger.Debug("chain - block consensus msg - update blockchain - blocks to put", zap.Any("blocks", resultBlocks))
 	for _, block := range resultBlocks {
-		err, _ = s.Storage.Put(blockchainCol, &models.BlockConsensusMessage{
-			Votes:     block.Votes,
-			BlockHash: block.BlockHash,
-			Block: &models.Block{
-				Type:              models.BlockConsensusMsgType,
-				Number:            block.Block.Number,
-				PreviousBlockHash: block.Block.PreviousBlockHash,
-				BlockHash:         block.Block.BlockHash,
-				BaseRND:           block.Block.BaseRND,
-				Messages:          block.Block.Messages,
-				SenderAddress:     block.Block.SenderAddress,
-				SenderSignature:   block.Block.SenderSignature,
-			},
-		}, storageToken)
+		err, _ = s.Storage.Put(blockchainCol, block, storageToken)
 		if err != nil {
 			return err
 		}

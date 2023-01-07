@@ -803,7 +803,14 @@ func (s *InternalService) removeCandidates(storageToken string) error {
 		return err
 	}
 
+	if len(blockCandidates) == 0 {
+		return nil
+	}
+
 	for _, blockCandidate := range blockCandidates {
+		if len(blockCandidate.Block.Messages) == 0 {
+			continue
+		}
 		for _, tx := range blockCandidate.Block.Messages {
 			err, _ := s.Storage.Update(MessagesPoolCol, bson.M{"message_hash": tx.MessageHash}, bson.M{"block_number": 0, "block_hash": ""}, storageToken)
 			if err != nil {

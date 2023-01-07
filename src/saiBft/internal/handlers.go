@@ -83,8 +83,6 @@ var HandleTxFromCli = saiService.HandlerElement{
 			return nil, fmt.Errorf("wrong type for args in cli tx method, current type :%s", reflect.TypeOf(data))
 		}
 
-		Service.GlobalService.Logger.Debug("got message from cli", zap.Strings("data", argsStr))
-
 		if len(argsStr) != 5 {
 			return nil, errors.New("not enough arguments in cli tx method")
 		}

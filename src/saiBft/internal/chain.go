@@ -40,7 +40,7 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 
 	for {
 		data := <-s.MsgQueue
-		//s.GlobalService.Logger.Debug("chain - got data", zap.Any("data", data)) // DEBUG
+		s.GlobalService.Logger.Debug("chain - got data", zap.Any("data", data)) // DEBUG
 		switch data.(type) {
 		case *models.Tx:
 			// skip if state is not initialized
@@ -73,10 +73,6 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 
 			Service.GlobalService.Logger.Debug("TransactionMsg was saved in MessagesPool", zap.String("hash", msg.Tx.MessageHash), zap.Any("msg", msg.Tx.Message))
 		case *models.TxFromHandler:
-			// skip if state is not initialized
-			if !s.IsInitialized {
-				continue
-			}
 			tx := data.(*models.TxFromHandler)
 			txMsg := tx.Tx
 			//Service.GlobalService.Logger.Debug("handlers - handleMessage", zap.String("type", txMsg.Type), zap.Any("msg", txMsg)) // DEBUG

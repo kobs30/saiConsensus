@@ -84,29 +84,54 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 			err := msg.Validate()
 			if err != nil {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - transactionMsg - validate", zap.Error(err))
-				continue
+				if tx.IsFromCli {
+					s.TxHandlerSyncCh <- struct{}{}
+				} else {
+					continue
+				}
+
 			}
 			err = models.ValidateSignature(msg, saiBtcAddress, msg.Tx.SenderAddress, msg.Tx.SenderSignature)
 			if err != nil {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - tx msg - validate signature ", zap.Error(err))
-				continue
+				if tx.IsFromCli {
+					s.TxHandlerSyncCh <- struct{}{}
+				} else {
+					continue
+				}
 			}
 
 			err, result := s.Storage.Get(MessagesPoolCol, msg, bson.M{}, storageToken)
 			if err != nil {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - transactionMsg - get from storage", zap.Error(err))
-				continue
+				if tx.IsFromCli {
+					s.TxHandlerSyncCh <- struct{}{}
+				} else {
+					continue
+				}
 			}
 
 			if len(result) > 2 {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - transactionMsg - we have sent this message", zap.Error(err))
-				continue
+				if tx.IsFromCli {
+					s.TxHandlerSyncCh <- struct{}{}
+				} else {
+					if tx.IsFromCli {
+						s.TxHandlerSyncCh <- struct{}{}
+					} else {
+						continue
+					}
+				}
 			}
 
 			err, _ = s.Storage.Put("MessagesPool", msg, storageToken)
 			if err != nil {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - transactionMsg - put to storage", zap.Error(err))
-				continue
+				if tx.IsFromCli {
+					s.TxHandlerSyncCh <- struct{}{}
+				} else {
+					continue
+				}
 			}
 
 			Service.GlobalService.Logger.Debug("TransactionMsg was saved in MessagesPool", zap.String("hash", msg.Tx.MessageHash), zap.Any("msg", msg.Tx.Message))
@@ -186,9 +211,19 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 					continue
 				}
 				s.IsInitialized = true
+
+				//todo : update parameters coll
+				s.Validators = append(s.Validators, s.BTCkeys.Address)
+
+				err, _ := s.Storage.Update(ParametersCol, bson.M{}, bson.M{"validators": s.Validators}, storageToken)
+				if err != nil {
+					Service.GlobalService.Logger.Error("listenFromSaiP2P - initial block consensus msg - put to storage", zap.Error(err))
+					continue
+				}
+
 				s.InitialSignalCh <- struct{}{}
 
-				err := s.updateBlockchain(msg, storageToken, saiP2pProxyAddress, saiP2Paddress)
+				err = s.updateBlockchain(msg, storageToken, saiP2pProxyAddress, saiP2Paddress)
 				if err != nil {
 					Service.GlobalService.Logger.Error("listenFromSaiP2P - initial block consensus msg - update blockchain", zap.Error(err))
 					continue

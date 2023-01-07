@@ -808,7 +808,7 @@ func (s *InternalService) removeCandidates(storageToken string) error {
 	}
 
 	for _, blockCandidate := range blockCandidates {
-		if len(blockCandidate.Block.Messages) == 0 {
+		if blockCandidate.Block.Messages == nil {
 			continue
 		}
 		for _, tx := range blockCandidate.Block.Messages {

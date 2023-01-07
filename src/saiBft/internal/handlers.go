@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"reflect"
-	"time"
 
 	"github.com/iamthe1whoknocks/bft/models"
 	"github.com/iamthe1whoknocks/saiService"
@@ -88,50 +87,11 @@ var HandleTxFromCli = saiService.HandlerElement{
 			return nil, errors.New("not enough arguments in cli tx method")
 		}
 
-		saiBtcAddress, ok := Service.GlobalService.Configuration["saiBTC_address"].(string)
-		if !ok {
-			Service.GlobalService.Logger.Fatal("wrong type of saiBTC_address value in config")
-		}
-
-		btckeys, err := Service.GetBTCkeys("btc_keys.json", saiBtcAddress)
+		transactionMessage, err := models.CreateTxMsg(Service.CoreCtx, argsStr)
 		if err != nil {
-			Service.GlobalService.Logger.Fatal("listenFromSaiP2P  - handle tx msg - get btc keys", zap.Error(err))
+			Service.GlobalService.Logger.Error("handlers - get-tx - create tx", zap.Error(err))
+			return nil, err
 		}
-		Service.BTCkeys = btckeys
-
-		txMsg := &models.TxMessage{
-			Method: argsStr[0],
-		}
-		params := argsStr[1:]
-		txMsg.Params = append(txMsg.Params, params...)
-
-		txMsgBytes, err := json.Marshal(txMsg)
-		if err != nil {
-			Service.GlobalService.Logger.Error("handlers - tx  -  marshal tx msg", zap.Error(err))
-			return nil, fmt.Errorf("handlers - tx  -  marshal tx msg: %w", err)
-		}
-		transactionMessage := &models.TransactionMessage{
-			Tx: &models.Tx{
-				Type:          models.TransactionMsgType,
-				SenderAddress: Service.BTCkeys.Address,
-				Message:       string(txMsgBytes),
-				Nonce:         int(time.Now().Unix()),
-			},
-		}
-
-		hash, err := transactionMessage.Tx.GetHash()
-		if err != nil {
-			Service.GlobalService.Logger.Error("handlers  - tx - count tx message hash", zap.Error(err))
-			return nil, fmt.Errorf("handlers  - tx - count tx message hash: %w", err)
-		}
-		transactionMessage.Tx.MessageHash = hash
-
-		btcResp, err := models.SignMessage(transactionMessage, saiBtcAddress, Service.BTCkeys.Private)
-		if err != nil {
-			Service.GlobalService.Logger.Error("handlers  - tx - sign tx message", zap.Error(err))
-			return nil, fmt.Errorf("handlers  - tx - sign tx message: %w", err)
-		}
-		transactionMessage.Tx.SenderSignature = btcResp.Signature
 
 		saiP2Paddress, ok := Service.GlobalService.Configuration["saiP2P_address"].(string)
 		if !ok {

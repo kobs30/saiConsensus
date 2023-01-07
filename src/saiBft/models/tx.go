@@ -28,7 +28,7 @@ type TransactionMessage struct {
 type Tx struct {
 	Type            string      `json:"type" valid:",required"`
 	SenderAddress   string      `json:"sender_address" valid:",required"`
-	Message         interface{} `json:"message" valid:",required"`
+	Message         interface{} `json:"message"`
 	SenderSignature string      `json:"sender_signature" valid:",required"`
 	MessageHash     string      `json:"message_hash" valid:",required"`
 	Nonce           int         `json:"nonce"`

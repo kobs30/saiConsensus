@@ -33,6 +33,7 @@ func Init(svc *saiService.Service) {
 	Service.Handler[HandleTxFromCli.Name] = HandleTxFromCli
 	Service.Handler[HandleMessage.Name] = HandleMessage
 	Service.Handler[CreateBTCKeys.Name] = CreateBTCKeys
+	Service.Handler[GetTx.Name] = GetTx
 
 	// setting values to core context
 	Service.SetContext(btckeys)

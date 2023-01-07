@@ -25,12 +25,12 @@ type TransactionMessage struct {
 
 // transaction struct
 type Tx struct {
-	Type            string `json:"type" valid:",required"`
-	SenderAddress   string `json:"sender_address" valid:",required"`
-	Message         string `json:"message" valid:",required"`
-	SenderSignature string `json:"sender_signature" valid:",required"`
-	MessageHash     string `json:"message_hash" valid:",required"`
-	Nonce           int    `json:"nonce"`
+	Type            string      `json:"type" valid:",required"`
+	SenderAddress   string      `json:"sender_address" valid:",required"`
+	Message         interface{} `json:"message" valid:",required"`
+	SenderSignature string      `json:"sender_signature" valid:",required"`
+	MessageHash     string      `json:"message_hash" valid:",required"`
+	Nonce           int         `json:"nonce"`
 }
 
 // tx message struct
@@ -75,17 +75,32 @@ func (m *TransactionMessage) GetExecutedHash() error {
 	return nil
 }
 
-func (m *TransactionMessage) CreateTxMsg(ctx context.Context, txMsg []byte) (*TransactionMessage, error) {
+func CreateTxMsg(ctx context.Context, argsStr []string) (*TransactionMessage, error) {
+	params := argsStr[1:]
+
+	txMsg := &TxMessage{
+		Method: argsStr[0],
+	}
+
+	txMsg.Params = append(txMsg.Params, params...)
 
 	txMsgBytes, err := json.Marshal(txMsg)
 	if err != nil {
 		return nil, fmt.Errorf("handlers - createTx  -  marshal tx msg: %w", err)
 	}
+
+	m := make(map[string]interface{})
+
+	err = json.Unmarshal(txMsgBytes, &m)
+	if err != nil {
+		return nil, fmt.Errorf("handlers - createTx  -  unmarshal to map: %w", err)
+	}
+
 	transactionMessage := &TransactionMessage{
 		Tx: &Tx{
 			Type:          TransactionMsgType,
 			SenderAddress: ctx.Value("saiBTCKeys").(*BtcKeys).Address,
-			Message:       string(txMsgBytes),
+			Message:       m,
 		},
 	}
 
@@ -100,6 +115,7 @@ func (m *TransactionMessage) CreateTxMsg(ctx context.Context, txMsg []byte) (*Tr
 		return nil, fmt.Errorf("handlers  - createTx - sign tx message: %w", err)
 	}
 	transactionMessage.Tx.SenderSignature = btcResp.Signature
+	transactionMessage.MessageHash = hash
 
 	return transactionMessage, nil
 }

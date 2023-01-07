@@ -112,7 +112,6 @@ var HandleTxFromCli = saiService.HandlerElement{
 			return nil, fmt.Errorf("handlers - tx  -  marshal tx msg: %w", err)
 		}
 		transactionMessage := &models.TransactionMessage{
-
 			Tx: &models.Tx{
 				Type:          models.TransactionMsgType,
 				SenderAddress: Service.BTCkeys.Address,
@@ -280,4 +279,62 @@ func (s *InternalService) Init() {
 
 func (s *InternalService) Process() {
 	s.Processing()
+}
+
+// GetTx returns created tx
+// example : bft tx send $FROM $TO $AMOUNT $DENOM
+var GetTx = saiService.HandlerElement{
+	Name:        "get-tx",
+	Description: "return tx message",
+	Function: func(data interface{}) (interface{}, error) {
+		argsStr := make([]string, 0)
+		txStruct := models.TxFromHandler{
+			IsFromCli: false,
+		}
+		switch args := data.(type) {
+		case []string:
+			argsStr = args
+			Service.GlobalService.Logger.Debug("got message from cli", zap.Strings("data", argsStr))
+			txStruct.IsFromCli = true
+		case []interface{}:
+			for _, iface := range args {
+				strArg, ok := iface.(string)
+				if !ok {
+					return nil, fmt.Errorf("wrong argument type in tx data, argument : [%s],type  :[%s]", iface, reflect.TypeOf(data))
+				}
+				argsStr = append(argsStr, strArg)
+			}
+			Service.GlobalService.Logger.Debug("got message from http", zap.Strings("data", argsStr))
+		default:
+			return nil, fmt.Errorf("wrong type for args in cli tx method, current type :%s", reflect.TypeOf(data))
+		}
+
+		Service.GlobalService.Logger.Debug("got message from cli", zap.Strings("data", argsStr))
+
+		if len(argsStr) != 5 {
+			return nil, errors.New("not enough arguments in cli tx method")
+		}
+
+		tx, err := models.CreateTxMsg(Service.CoreCtx, argsStr)
+		if err != nil {
+			Service.GlobalService.Logger.Error("handlers - get-tx - create tx", zap.Error(err))
+			return nil, err
+		}
+
+		txMarshalled, err := json.Marshal(tx)
+		if err != nil {
+			Service.GlobalService.Logger.Error("handlers - get-tx - marshal tx", zap.Error(err))
+			return nil, err
+		}
+
+		m := make(map[string]interface{})
+
+		err = json.Unmarshal(txMarshalled, &m)
+		if err != nil {
+			Service.GlobalService.Logger.Error("handlers - get-tx - unmarshal tx to map", zap.Error(err))
+			return nil, err
+		}
+		return m, nil
+
+	},
 }

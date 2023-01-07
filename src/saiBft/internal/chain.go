@@ -71,7 +71,7 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				continue
 			}
 
-			Service.GlobalService.Logger.Debug("TransactionMsg was saved in MessagesPool", zap.String("hash", msg.Tx.MessageHash), zap.String("msg", msg.Tx.Message))
+			Service.GlobalService.Logger.Debug("TransactionMsg was saved in MessagesPool", zap.String("hash", msg.Tx.MessageHash), zap.Any("msg", msg.Tx.Message))
 		case *models.TxFromHandler:
 			// skip if state is not initialized
 			if !s.IsInitialized {
@@ -113,7 +113,7 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				continue
 			}
 
-			Service.GlobalService.Logger.Debug("TransactionMsg was saved in MessagesPool", zap.String("hash", msg.Tx.MessageHash), zap.String("msg", msg.Tx.Message))
+			Service.GlobalService.Logger.Debug("TransactionMsg was saved in MessagesPool", zap.String("hash", msg.Tx.MessageHash), zap.Any("msg", msg.Tx.Message))
 			if tx.IsFromCli {
 				s.TxHandlerSyncCh <- struct{}{}
 			}

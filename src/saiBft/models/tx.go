@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	valid "github.com/asaskevich/govalidator"
 )
@@ -101,6 +102,7 @@ func CreateTxMsg(ctx context.Context, argsStr []string) (*TransactionMessage, er
 			Type:          TransactionMsgType,
 			SenderAddress: ctx.Value("saiBTCKeys").(*BtcKeys).Address,
 			Message:       m,
+			Nonce:         int(time.Now().Unix()),
 		},
 	}
 

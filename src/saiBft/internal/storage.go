@@ -1,12 +1,15 @@
 package internal
 
 import (
+	"bytes"
 	"log"
+	"time"
 
 	"github.com/iamthe1whoknocks/bft/utils"
+	"go.uber.org/zap"
 )
 
-func NewDB() utils.Database {
+func NewDB(duplicateCh chan *bytes.Buffer) utils.Database {
 	url, ok := Service.GlobalService.Configuration["storage_url"].(string)
 	if !ok {
 		log.Fatalf("configuration : invalid storage url provided, url : %s", Service.GlobalService.Configuration["storage_url"])
@@ -30,5 +33,16 @@ func NewDB() utils.Database {
 		duplicateRequestsUrl = ""
 	}
 
-	return utils.Storage(url, email, password, duplicateRequests, duplicateRequestsUrl)
+	return utils.Storage(url, email, password, duplicateRequests, duplicateRequestsUrl, duplicateCh)
+}
+
+func (s *InternalService) duplicateRequests() {
+	for {
+		time.Sleep(time.Duration(s.CoreCtx.Value(SaiDuplicateStorageRequestsInterval).(int)) * time.Second)
+		buf := <-s.DuplicateStorageCh
+		err, _ := utils.Send(s.CoreCtx.Value(SaiDuplicateStorageRequestsURL).(string), buf, "")
+		if err != nil {
+			s.GlobalService.Logger.Error("process - duplicate requests - send", zap.Error(err))
+		}
+	}
 }

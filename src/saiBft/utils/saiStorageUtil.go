@@ -18,15 +18,17 @@ type Database struct {
 	password             string
 	duplicateRequests    bool
 	duplicateRequestsUrl string
+	duplicateRequestsCh  chan *bytes.Buffer
 }
 
-func Storage(Url string, Email string, Password string, duplicateRequests bool, duplicateRequestsUrl string) Database {
+func Storage(Url string, Email string, Password string, duplicateRequests bool, duplicateRequestsUrl string, duplicateCh chan *bytes.Buffer) Database {
 	return Database{
 		url:                  Url,
 		email:                Email,
 		password:             Password,
 		duplicateRequests:    duplicateRequests,
 		duplicateRequestsUrl: duplicateRequestsUrl,
+		duplicateRequestsCh:  duplicateCh,
 	}
 }
 
@@ -92,14 +94,16 @@ func (db Database) makeRequest(method string, request StorageRequest, token stri
 	}
 	if db.duplicateRequests {
 		if method == "save" || method == "upsert" || method == "update" {
-			send(db.duplicateRequestsUrl, bytes.NewBuffer(jsonStr), "")
+			go func() {
+				db.duplicateRequestsCh <- bytes.NewBuffer(jsonStr)
+			}()
 		}
 	}
 
-	return send(db.url+"/"+method, bytes.NewBuffer(jsonStr), token)
+	return Send(db.url+"/"+method, bytes.NewBuffer(jsonStr), token)
 }
 
-func send(url string, data io.Reader, token string) (error, []byte) {
+func Send(url string, data io.Reader, token string) (error, []byte) {
 	req, err := http.NewRequest("POST", url, data)
 
 	if err != nil {

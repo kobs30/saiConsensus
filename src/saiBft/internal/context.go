@@ -8,11 +8,14 @@ import (
 )
 
 const (
-	SaiBTCaddress   = "saiBTC_address"
-	SaiP2pAddress   = "saiP2P_address"
-	SaiStorageToken = "storage_token"
-	SaiSleep        = "sleep"
-	SaiBTCKeys      = "saiBTCKeys"
+	SaiBTCaddress                       = "saiBTC_address"
+	SaiP2pAddress                       = "saiP2P_address"
+	SaiStorageToken                     = "storage_token"
+	SaiSleep                            = "sleep"
+	SaiBTCKeys                          = "saiBTCKeys"
+	SaiDuplicateStorageRequests         = "duplicate_storage_requests"
+	SaiDuplicateStorageRequestsURL      = "duplicate_storage_requests_url"
+	SaiDuplicateStorageRequestsInterval = "duplicate_storage_requests_interval"
 )
 
 func (s *InternalService) SetContext(btcKeys *models.BtcKeys) {
@@ -35,9 +38,26 @@ func (s *InternalService) SetContext(btcKeys *models.BtcKeys) {
 		s.GlobalService.Logger.Sugar().Fatalf("handlers - processing - wrong type of sleep value from config, provided type : %s", reflect.TypeOf(sleepValue).String())
 	}
 
+	duplicateRequests, ok := Service.GlobalService.Configuration["duplicate_storage_requests"].(bool)
+	if !ok {
+		duplicateRequests = false
+	}
+
+	duplicateRequestsUrl, ok := Service.GlobalService.Configuration["duplicate_storage_requests_url"].(string)
+	if !ok {
+		duplicateRequestsUrl = ""
+	}
+	duplicateRequestsInterval, ok := Service.GlobalService.Configuration["duplicate_storage_requests_interval"].(int)
+	if !ok {
+		duplicateRequestsInterval = 0
+	}
+
 	s.CoreCtx = context.WithValue(context.Background(), SaiBTCaddress, btcAddress)
 	s.CoreCtx = context.WithValue(s.CoreCtx, SaiP2pAddress, p2pAddress)
 	s.CoreCtx = context.WithValue(s.CoreCtx, SaiStorageToken, storageToken)
 	s.CoreCtx = context.WithValue(s.CoreCtx, SaiSleep, sleepValue)
 	s.CoreCtx = context.WithValue(s.CoreCtx, SaiBTCKeys, btcKeys)
+	s.CoreCtx = context.WithValue(s.CoreCtx, SaiDuplicateStorageRequests, duplicateRequests)
+	s.CoreCtx = context.WithValue(s.CoreCtx, SaiDuplicateStorageRequestsURL, duplicateRequestsUrl)
+	s.CoreCtx = context.WithValue(s.CoreCtx, SaiDuplicateStorageRequestsInterval, duplicateRequestsInterval)
 }

@@ -160,6 +160,10 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 			}
 
 			if !s.IsInitialized {
+				// requiredVotes := math.Ceil(float64(len(s.Validators)) * 7 / 10)
+
+				// if float64(blockCandidate.Votes) >= requiredVotes {
+
 				Service.GlobalService.Logger.Debug("handlers - handleMessage - not initialized - put to candidates", zap.Int("block_number", msg.Number), zap.String("hash", msg.BlockHash)) // DEBUG
 				votedSignatures := make([]string, 0)
 				err, _ = s.Storage.Put(BlockCandidatesCol, &models.BlockConsensusMessage{

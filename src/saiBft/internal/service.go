@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"bytes"
 	"context"
 	"sync"
 
@@ -13,7 +14,7 @@ import (
 // here we add all implemented handlers, create name of service and register config
 // moved from handlers to service because of initialization problems
 func Init(svc *saiService.Service) {
-	storage := NewDB()
+	storage := NewDB(Service.DuplicateStorageCh)
 	Service.Storage = storage
 
 	btckeys, err := Service.GetBTCkeys("btc_keys.json", Service.GlobalService.Configuration["saiBTC_address"].(string))
@@ -59,6 +60,7 @@ type InternalService struct {
 	TxHandlerSyncCh      chan struct{} // chan to handle tx via http/cli
 	IsValidator          bool          //is node a validator
 	CoreCtx              context.Context
+	DuplicateStorageCh   chan *bytes.Buffer //chan for duplicate save/update/upsert requests to storage
 }
 
 // global handler for registering handlers
@@ -72,4 +74,5 @@ var Service = &InternalService{
 	IsInitialized:        false,
 	MissedBlocksLinkCh:   make(chan string),
 	TxHandlerSyncCh:      make(chan struct{}),
+	DuplicateStorageCh:   make(chan *bytes.Buffer, 100),
 }

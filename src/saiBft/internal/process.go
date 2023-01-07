@@ -39,7 +39,7 @@ const (
 // main process of blockchain
 func (s *InternalService) Processing() {
 
-	s.GlobalService.Logger.Sugar().Debugf("starting processing") //DEBUG
+	s.GlobalService.Logger.Debug("starting processing") //DEBUG
 
 	// for tests
 	//btcKeys1, _ := s.getBTCkeys("btc_keys3.json", SaiBTCaddress)
@@ -81,6 +81,10 @@ func (s *InternalService) Processing() {
 	//TEST transaction &consensus messages
 	s.saveTestTx(s.CoreCtx.Value(SaiBTCaddress).(string), s.CoreCtx.Value(SaiStorageToken).(string), s.CoreCtx.Value(SaiP2pAddress).(string))
 	s.saveTestTx2(s.CoreCtx.Value(SaiBTCaddress).(string), s.CoreCtx.Value(SaiStorageToken).(string), s.CoreCtx.Value(SaiP2pAddress).(string))
+
+	if s.CoreCtx.Value(SaiDuplicateStorageRequests).(bool) {
+		go s.duplicateRequests()
+	}
 
 	for {
 	startLoop:

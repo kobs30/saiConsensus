@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"time"
 
 	"github.com/iamthe1whoknocks/bft/models"
 	"github.com/iamthe1whoknocks/saiService"
@@ -114,6 +115,7 @@ var HandleTxFromCli = saiService.HandlerElement{
 				Type:          models.TransactionMsgType,
 				SenderAddress: Service.BTCkeys.Address,
 				Message:       string(txMsgBytes),
+				Nonce:         int(time.Now().Unix()),
 			},
 		}
 

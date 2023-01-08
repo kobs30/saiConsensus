@@ -110,7 +110,6 @@ func (s *InternalService) rndProcessing(saiBTCAddress, saiP2pAddress, storageTok
 	return rndMsg, nil
 
 getRndForSpecifiedRoundAndBlock:
-	var _rnd int64 = 0
 	rndRound++
 
 	s.GlobalService.Logger.Debug("process - rnd processing -  new round", zap.Int("round", rndRound), zap.Int("rnd", int(rnd)))
@@ -150,6 +149,7 @@ getRndForSpecifiedRoundAndBlock:
 
 		//s.GlobalService.Logger.Debug("process - rnd processing - rnd msgs after filtration", zap.Any("filtered msgs", filteredRndMsgs))
 		var newRndMsg *models.RND
+		var _rnd int64 = 0
 
 		for _, msg := range filteredRndMsgs {
 			if msg.Message.Rnd == rnd {
@@ -162,14 +162,10 @@ getRndForSpecifiedRoundAndBlock:
 					s.GlobalService.Logger.Error("handlers - process - round != 0 - get messages for specified round", zap.Error(err))
 					return nil, err
 				}
-				if msg.Message.SenderAddress == s.BTCkeys.Address {
-					newRndMsg = msg
-				}
+				newRndMsg = msg
 			} else {
 				_rnd += msg.Message.Rnd
-				if msg.Message.SenderAddress == s.BTCkeys.Address {
-					newRndMsg = msg
-				}
+				newRndMsg = msg
 			}
 		}
 

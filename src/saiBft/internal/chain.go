@@ -71,7 +71,8 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				continue
 			}
 
-			Service.GlobalService.Logger.Debug("TransactionMsg was saved in MessagesPool", zap.String("hash", msg.Tx.MessageHash), zap.Any("msg", msg.Tx.Message))
+			//	Service.GlobalService.Logger.Debug("TransactionMsg was saved in MessagesPool", zap.String("hash", msg.Tx.MessageHash), zap.Any("msg", msg.Tx.Message))
+			Service.GlobalService.Logger.Debug("TransactionMsg was saved in MessagesPool", zap.String("hash", msg.Tx.MessageHash), zap.String("executed_hash", msg.ExecutedHash), zap.String("address", msg.Tx.SenderAddress))
 		case *models.TxFromHandler:
 			tx := data.(*models.TxFromHandler)
 			txMsg := tx.Tx
@@ -134,7 +135,9 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				}
 			}
 
-			Service.GlobalService.Logger.Debug("TransactionMsg was saved in MessagesPool", zap.String("hash", msg.Tx.MessageHash), zap.Any("msg", msg.Tx.Message))
+			//Service.GlobalService.Logger.Debug("TransactionMsg was saved in MessagesPool", zap.String("hash", msg.Tx.MessageHash), zap.Any("msg", msg.Tx.Message))
+			Service.GlobalService.Logger.Debug("TransactionMsg was saved in MessagesPool", zap.String("hash", msg.Tx.MessageHash), zap.String("executed_hash", msg.ExecutedHash), zap.String("address", msg.Tx.SenderAddress))
+
 			if tx.IsFromCli {
 				s.TxHandlerSyncCh <- struct{}{}
 			}
@@ -261,7 +264,7 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - rndMessage - put to storage", zap.Error(err))
 				continue
 			}
-			Service.GlobalService.Logger.Sugar().Debugf("RndMsg was saved in RndPool storage, msg : %+v\n", msg)
+			Service.GlobalService.Logger.Debug("RndMsg was saved in RndPool storage", zap.Int("rnd", int(msg.Rnd)), zap.Int("block_number", msg.BlockNumber), zap.String("address", msg.SenderAddress))
 
 		default:
 			Service.GlobalService.Logger.Error("listenFromSaiP2P - got wrong msg type", zap.Any("type", reflect.TypeOf(data)))

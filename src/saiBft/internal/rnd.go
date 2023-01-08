@@ -110,12 +110,13 @@ func (s *InternalService) rndProcessing(saiBTCAddress, saiP2pAddress, storageTok
 	return rndMsg, nil
 
 getRndForSpecifiedRoundAndBlock:
+	var _rnd int64 = 0
 	rndRound++
 
 	s.GlobalService.Logger.Debug("process - rnd processing -  new round", zap.Int("round", rndRound), zap.Int("rnd", int(rnd)))
 
 	// get rnd messages for the round and for block
-	err, result = s.Storage.Get(RndMessagesPoolCol, bson.M{"message.block_number": blockNumber, "message.round": rndRound, "message.sender_address": bson.M{"$ne": s.BTCkeys.Address}}, bson.M{}, storageToken)
+	err, result = s.Storage.Get(RndMessagesPoolCol, bson.M{"message.block_number": blockNumber, "message.round": rndRound}, bson.M{}, storageToken)
 	if err != nil {
 		s.GlobalService.Logger.Error("processing - rnd processing - get rnd for specified round/block", zap.Error(err))
 		return nil, err
@@ -148,9 +149,9 @@ getRndForSpecifiedRoundAndBlock:
 		}
 
 		//s.GlobalService.Logger.Debug("process - rnd processing - rnd msgs after filtration", zap.Any("filtered msgs", filteredRndMsgs))
+		var newRndMsg *models.RND
 
 		for _, msg := range filteredRndMsgs {
-			var newRndMsg *models.RND
 			if msg.Message.Rnd == rnd {
 				s.GlobalService.Logger.Debug("process - rnd - found rnd msg with the same rnd", zap.Int64("rnd", msg.Message.Rnd), zap.Int("round", rndRound))
 				msg.Votes++
@@ -161,31 +162,21 @@ getRndForSpecifiedRoundAndBlock:
 					s.GlobalService.Logger.Error("handlers - process - round != 0 - get messages for specified round", zap.Error(err))
 					return nil, err
 				}
-				newRndMsg = &models.RND{
-					Votes: msg.Votes,
-					Message: &models.RNDMessage{
-						Type:          models.RNDMessageType,
-						SenderAddress: s.BTCkeys.Address,
-						BlockNumber:   msg.Message.BlockNumber,
-						Round:         rndRound + 1,
-						Rnd:           rnd,
-						TxMsgHashes:   msg.Message.TxMsgHashes,
-					},
+				if msg.Message.SenderAddress == s.BTCkeys.Address {
+					newRndMsg = msg
 				}
 			} else {
-				rnd += msg.Message.Rnd
-				newRndMsg = &models.RND{
-					Votes: +1,
-					Message: &models.RNDMessage{
-						Type:          models.RNDMessageType,
-						SenderAddress: s.BTCkeys.Address,
-						BlockNumber:   msg.Message.BlockNumber,
-						Round:         rndRound + 1,
-						Rnd:           rnd,
-						TxMsgHashes:   msg.Message.TxMsgHashes,
-					},
+				_rnd += msg.Message.Rnd
+				if msg.Message.SenderAddress == s.BTCkeys.Address {
+					newRndMsg = msg
 				}
 			}
+		}
+
+		if _rnd > 0 {
+			newRndMsg.Votes = 1
+			newRndMsg.Message.Rnd = _rnd
+
 			hash, err := newRndMsg.Message.GetHash()
 			if err != nil {
 				s.GlobalService.Logger.Error("process - rnd processing - get hash", zap.Error(err))
@@ -206,7 +197,6 @@ getRndForSpecifiedRoundAndBlock:
 				s.GlobalService.Logger.Error("process - rnd processing - put to db", zap.Error(err))
 				return nil, err
 			}
-			//			s.GlobalService.Logger.Debug("process - rnd - rnd != msg.Rnd - sum rnd - put to db", zap.Int64("rnd", newRndMsg.Message.Rnd), zap.Int("round", newRndMsg.Message.Round))
 
 			err = s.broadcastMsg(newRndMsg.Message, saiP2pAddress)
 			if err != nil {

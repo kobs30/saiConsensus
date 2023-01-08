@@ -187,7 +187,7 @@ func (s *InternalService) Processing() {
 
 				// update votes for each tx message from consensusMsg
 				for _, txMsgHash := range msg.Messages {
-					err, result := s.Storage.Get("MessagesPool", bson.M{"executed_hash": txMsgHash}, bson.M{}, s.CoreCtx.Value(SaiStorageToken).(string))
+					err, result := s.Storage.Get("MessagesPool", bson.M{"executed_hash": txMsgHash, "block_hash": ""}, bson.M{}, s.CoreCtx.Value(SaiStorageToken).(string))
 					if err != nil {
 						s.GlobalService.Logger.Error("process - get msg from consensus msg from storage", zap.Error(err))
 						continue
@@ -440,7 +440,7 @@ func checkConsensusMsgSender(validators []string, msg *models.ConsensusMessage) 
 
 // get consensus messages for the round
 func (s *InternalService) getConsensusMsgForTheRound(round, blockNumber int, storageToken string) ([]*models.ConsensusMessage, error) {
-	err, result := s.Storage.Get(ConsensusPoolCol, bson.M{"round": round, "block_number": blockNumber, "block_hash": ""}, bson.M{}, storageToken)
+	err, result := s.Storage.Get(ConsensusPoolCol, bson.M{"round": round, "block_number": blockNumber}, bson.M{}, storageToken)
 	if err != nil {
 		s.GlobalService.Logger.Error("process - round != 0 - get messages for specified round", zap.Error(err))
 		return nil, err
@@ -819,6 +819,11 @@ func (s *InternalService) removeCandidates(storageToken string) error {
 			err, _ := s.Storage.Update(MessagesPoolCol, bson.M{"message_hash": tx.MessageHash}, bson.M{"block_number": 0, "block_hash": ""}, storageToken)
 			if err != nil {
 				s.GlobalService.Logger.Error("process - remove candidates - update tx", zap.Error(err))
+				continue
+			}
+			err = s.updateTxMsgZeroVotes(storageToken)
+			if err != nil {
+				s.GlobalService.Logger.Error("process - remove candidates - update tx msgs zero votes", zap.Error(err))
 				continue
 			}
 		}

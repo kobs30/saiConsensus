@@ -147,14 +147,15 @@ getRndForSpecifiedRoundAndBlock:
 			}
 		}
 
-		//s.GlobalService.Logger.Debug("process - rnd processing - rnd msgs after filtration", zap.Any("filtered msgs", filteredRndMsgs))
+		s.GlobalService.Logger.Debug("process - rnd processing - rnd msgs after filtration", zap.Any("filtered msgs", filteredRndMsgs))
+
 		var newRndMsg *models.RND
 		var _rnd int64 = 0
 
 		for _, msg := range filteredRndMsgs {
+			newRndMsg = msg
 			if msg.Message.Rnd == rnd {
 				s.GlobalService.Logger.Debug("process - rnd - found rnd msg with the same rnd", zap.Int64("rnd", msg.Message.Rnd), zap.Int("round", rndRound))
-				msg.Votes++
 				criteria := bson.M{"message.hash": msg.Message.Hash}
 				update := bson.M{"$inc": bson.M{"votes": 1}}
 				err, _ := s.Storage.Upsert(RndMessagesPoolCol, criteria, update, storageToken)
@@ -162,16 +163,15 @@ getRndForSpecifiedRoundAndBlock:
 					s.GlobalService.Logger.Error("handlers - process - round != 0 - get messages for specified round", zap.Error(err))
 					return nil, err
 				}
-				newRndMsg = msg
 			} else {
 				_rnd += msg.Message.Rnd
-				newRndMsg = msg
 			}
 		}
 
 		if _rnd > 0 {
 			newRndMsg.Votes = 0
 			newRndMsg.Message.Rnd = _rnd
+			newRndMsg.Message.Round = rndRound + 1
 
 			hash, err := newRndMsg.Message.GetHash()
 			if err != nil {

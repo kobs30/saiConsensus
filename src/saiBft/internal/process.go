@@ -79,8 +79,8 @@ func (s *InternalService) Processing() {
 	}
 
 	//TEST transaction &consensus messages
-	s.saveTestTx(s.CoreCtx.Value(SaiBTCaddress).(string), s.CoreCtx.Value(SaiStorageToken).(string), s.CoreCtx.Value(SaiP2pAddress).(string))
-	s.saveTestTx2(s.CoreCtx.Value(SaiBTCaddress).(string), s.CoreCtx.Value(SaiStorageToken).(string), s.CoreCtx.Value(SaiP2pAddress).(string))
+	//s.saveTestTx(s.CoreCtx.Value(SaiBTCaddress).(string), s.CoreCtx.Value(SaiStorageToken).(string), s.CoreCtx.Value(SaiP2pAddress).(string))
+	//s.saveTestTx2(s.CoreCtx.Value(SaiBTCaddress).(string), s.CoreCtx.Value(SaiStorageToken).(string), s.CoreCtx.Value(SaiP2pAddress).(string))
 
 	if s.CoreCtx.Value(SaiDuplicateStorageRequests).(bool) {
 		go s.duplicateRequests()

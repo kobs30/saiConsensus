@@ -149,11 +149,9 @@ getRndForSpecifiedRoundAndBlock:
 
 		s.GlobalService.Logger.Debug("process - rnd processing - rnd msgs after filtration", zap.Any("filtered msgs", filteredRndMsgs))
 
-		var newRndMsg *models.RND
 		var _rnd = rnd
 
 		for _, msg := range filteredRndMsgs {
-			newRndMsg = msg
 			if msg.Message.Rnd == _rnd {
 				s.GlobalService.Logger.Debug("process - rnd - found rnd msg with the same rnd", zap.Int64("rnd", msg.Message.Rnd), zap.Int("round", rndRound))
 				criteria := bson.M{"message.hash": msg.Message.Hash}
@@ -163,39 +161,39 @@ getRndForSpecifiedRoundAndBlock:
 					s.GlobalService.Logger.Error("handlers - process - round != 0 - get messages for specified round", zap.Error(err))
 					return nil, err
 				}
+				rnd = _rnd
 			} else {
 				_rnd += msg.Message.Rnd
 			}
 		}
 
 		if _rnd > 0 {
-			rnd = _rnd
-			newRndMsg.Votes = 1
-			newRndMsg.Message.Rnd = rnd
-			newRndMsg.Message.Round = rndRound + 1
+			rndMsg.Votes = 1
+			rndMsg.Message.Rnd = rnd
+			rndMsg.Message.Round = rndRound + 1
 
-			hash, err := newRndMsg.Message.GetHash()
+			hash, err := rndMsg.Message.GetHash()
 			if err != nil {
 				s.GlobalService.Logger.Error("process - rnd processing - get hash", zap.Error(err))
 				return nil, err
 			}
-			newRndMsg.Message.Hash = hash
+			rndMsg.Message.Hash = hash
 
-			resp, err := models.SignMessage(newRndMsg.Message, saiBTCAddress, s.BTCkeys.Private)
+			resp, err := models.SignMessage(rndMsg.Message, saiBTCAddress, s.BTCkeys.Private)
 			if err != nil {
 				s.GlobalService.Logger.Error("process - rnd processing - sign message", zap.Error(err))
 				return nil, err
 			}
 
-			newRndMsg.Message.SenderSignature = resp.Signature
+			rndMsg.Message.SenderSignature = resp.Signature
 
-			err, _ = s.Storage.Put(RndMessagesPoolCol, newRndMsg, storageToken)
+			err, _ = s.Storage.Put(RndMessagesPoolCol, rndMsg, storageToken)
 			if err != nil {
 				s.GlobalService.Logger.Error("process - rnd processing - put to db", zap.Error(err))
 				return nil, err
 			}
 
-			err = s.broadcastMsg(newRndMsg.Message, saiP2pAddress)
+			err = s.broadcastMsg(rndMsg.Message, saiP2pAddress)
 			if err != nil {
 				s.GlobalService.Logger.Error("processing - rnd processing - broadcast msg", zap.Error(err))
 				return nil, err

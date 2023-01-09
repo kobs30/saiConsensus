@@ -38,7 +38,6 @@ const (
 
 // main process of blockchain
 func (s *InternalService) Processing() {
-
 	s.GlobalService.Logger.Debug("starting processing") //DEBUG
 
 	// for tests
@@ -54,26 +53,22 @@ func (s *InternalService) Processing() {
 
 	s.GlobalService.Logger.Debug("get validators", zap.Strings("validators", s.Validators)) //DEBUG
 
-	var isValidator bool
-
 	for _, validator := range s.Validators {
 		if validator == s.BTCkeys.Address {
 			s.IsInitialized = true
-			isValidator = true
+			s.IsValidator = true
 		}
 	}
 
-	s.GlobalService.Logger.Debug("node mode", zap.Bool("is_validator", isValidator)) //DEBUG
+	s.GlobalService.Logger.Debug("node mode", zap.Bool("is_validator", s.IsValidator)) //DEBUG
 
 	// initial block consensus waiting
-	if !isValidator {
-	initialBlockConsensus:
-		for {
+	if !s.IsValidator {
+		for !s.IsInitialized {
 			select {
 			case <-s.InitialSignalCh:
 				s.IsInitialized = true
 				s.GlobalService.Logger.Debug("node was initialized by incoming block consensus msg")
-				break initialBlockConsensus
 			}
 		}
 	}
@@ -268,7 +263,7 @@ func (s *InternalService) Processing() {
 					goto startLoop
 				}
 
-				time.Sleep(time.Duration(s.GlobalService.Configuration["sleep"].(int)) * time.Second)
+				//time.Sleep(time.Duration(s.GlobalService.Configuration["sleep"].(int)) * time.Second)
 
 				goto startLoop
 			}
@@ -471,6 +466,11 @@ func (s *InternalService) getConsensusMsgForTheRound(round, blockNumber int, sto
 
 // broadcast messages to connected nodes
 func (s *InternalService) broadcastMsg(msg interface{}, SaiP2pAddress string) error {
+	if !s.IsValidator {
+		s.GlobalService.Logger.Debug("process - rnd processing can not be started - not a validator")
+		return nil
+	}
+
 	param := url.Values{}
 	data, err := json.Marshal(msg)
 

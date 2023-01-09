@@ -1,3 +1,6 @@
+upw:
+	docker-compose -f ./microservices/docker-compose-windows.yml up -d
+
 up:
 	docker-compose -f ./microservices/docker-compose.yml up -d
 
@@ -6,7 +9,6 @@ down:
 
 build:
 	make service
-	make docker
 
 service:
 #	cd ./src/saiStorage && go mod tidy && go build -o ../../microservices/saiStorage/build/sai-storage
@@ -22,6 +24,9 @@ service:
 
 docker:
 	docker-compose -f ./microservices/docker-compose.yml up -d --build
+
+dockerw:
+	docker-compose -f ./microservices/docker-compose-windows.yml up -d --build
 
 log:
 	docker-compose -f ./microservices/docker-compose.yml logs -f

@@ -227,13 +227,13 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				s.IsInitialized = true
 
 				//todo : update parameters coll
-				s.Validators = append(s.Validators, s.BTCkeys.Address)
+				//s.Validators = append(s.Validators, s.BTCkeys.Address)
 
-				err, _ := s.Storage.Update(ParametersCol, bson.M{}, bson.M{"validators": s.Validators}, storageToken)
-				if err != nil {
-					Service.GlobalService.Logger.Error("listenFromSaiP2P - initial block consensus msg - put to storage", zap.Error(err))
-					continue
-				}
+				//err, _ := s.Storage.Update(ParametersCol, bson.M{}, bson.M{"validators": s.Validators}, storageToken)
+				//if err != nil {
+				//	Service.GlobalService.Logger.Error("listenFromSaiP2P - initial block consensus msg - put to storage", zap.Error(err))
+				//	continue
+				//}
 
 				s.InitialSignalCh <- struct{}{}
 

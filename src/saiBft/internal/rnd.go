@@ -256,7 +256,7 @@ func (s *InternalService) getValidatedRnd(storageToken string, blockNumber, roun
 	requiredVotes := math.Ceil(float64(len(s.Validators)) * 7 / 10)
 	if float64(rndMsg.Votes) >= requiredVotes {
 		s.GlobalService.Logger.Debug("processing - rnd processing - get validated rnd -  found rnd message to add to block", zap.Float64("required votes", requiredVotes), zap.Any("rnd message", rndMsg))
-		s.Storage.Remove(RndMessagesPoolCol, bson.M{}, storageToken)
+		//s.Storage.Remove(RndMessagesPoolCol, bson.M{}, storageToken)
 		return rndMsg, nil
 	} else {
 		s.GlobalService.Logger.Debug("processing - rnd processing - rnd message to add to block was not found", zap.Float64("required votes", requiredVotes), zap.Any("rnd message", rndMsg))

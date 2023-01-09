@@ -443,15 +443,15 @@ func (s *InternalService) handleBlockCandidate(msg *models.Block, saiP2pProxyAdd
 
 		s.GlobalService.Logger.Sugar().Debugf("block candidate was inserted to blockchain collection, blockCandidate : %+v\n", blockCandidate) // DEBUG
 
-		err = s.updateBlockchain(blockCandidate.Block, saiP2pProxyAddress, storageToken, saiP2pAddress)
-		if err != nil {
-			s.GlobalService.Logger.Error("handleBlockConsensusMsg - blockHash = msgBlockHash - update blockchain", zap.Error(err))
-			return err
-		}
+		//err = s.updateBlockchain(blockCandidate.Block, saiP2pProxyAddress, storageToken, saiP2pAddress)
+		//if err != nil {
+		//	s.GlobalService.Logger.Error("handleBlockConsensusMsg - blockHash = msgBlockHash - update blockchain", zap.Error(err))
+		//	return err
+		//}
 	} else {
 		s.GlobalService.Logger.Debug("chain - get block consensus msg - handle block candidate - terminate (less than 70 percent votes got", zap.Int("block candidate votes", blockCandidate.Votes), zap.Float64("required votes", requiredVotes)) // DEBUG
-
 	}
+
 	return nil
 }
 

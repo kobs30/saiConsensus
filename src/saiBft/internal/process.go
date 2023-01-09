@@ -258,7 +258,7 @@ func (s *InternalService) Processing() {
 			} else {
 				s.GlobalService.Logger.Sugar().Debugf("ROUND = %d", round) //DEBUG
 
-				newBlock, err := s.formAndSaveNewBlock(block, s.CoreCtx.Value(SaiBTCaddress).(string), s.CoreCtx.Value(SaiStorageToken).(string), txMsgs, 0)
+				newBlock, err := s.formAndSaveNewBlock(block, s.CoreCtx.Value(SaiBTCaddress).(string), s.CoreCtx.Value(SaiStorageToken).(string), txMsgs, rnd.Message.Rnd)
 				if err != nil {
 					goto startLoop
 				}
@@ -552,15 +552,15 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 	newBlock.Block.SenderSignature = btcResp.Signature
 	newBlock.Signatures = append(newBlock.Signatures, btcResp.Signature)
 
-	if len(txMsgs) == 0 {
-		err := s.updateTxMsgZeroVotes(storageToken)
-		if err != nil {
-			s.GlobalService.Logger.Error("process - round == 7 - form and save new block - update tx msgs zero votes", zap.Error(err))
-			return nil, err
-		}
-		s.GlobalService.Logger.Error("process - round == 7 - form and save new block - no tx messages found")
-		return nil, errNoTxToFromBlock
-	}
+	//if len(txMsgs) == 0 {
+	//	err := s.updateTxMsgZeroVotes(storageToken)
+	//	if err != nil {
+	//		s.GlobalService.Logger.Error("process - round == 7 - form and save new block - update tx msgs zero votes", zap.Error(err))
+	//		return nil, err
+	//	}
+	//	s.GlobalService.Logger.Error("process - round == 7 - form and save new block - no tx messages found")
+	//	return nil, errNoTxToFromBlock
+	//}
 	s.GlobalService.Logger.Debug("process - formAndSaveNewBlock - formed block before count votes", zap.Int("block_number", newBlock.Block.Number), zap.Int("votes", newBlock.Votes), zap.String("hash", newBlock.BlockHash))
 
 	requiredVotes := math.Ceil(float64(len(s.Validators)) * 7 / 10)

@@ -57,14 +57,14 @@ func (s *InternalService) rndProcessing(saiBTCAddress, saiP2pAddress, storageTok
 
 	rndRound := 0
 
-	s.GlobalService.Logger.Debug("process - rnd processing", zap.Any("tx messages candidates", txMsgs), zap.Int("round", rndRound))
+	//s.GlobalService.Logger.Debug("process - rnd processing", zap.Any("tx messages candidates", txMsgs), zap.Int("round", rndRound))
 
 	source := rand.New(rand.NewSource(time.Now().UnixNano()))
 	rnd := source.Int63n(100)
 	s.GlobalService.Logger.Debug("rnd generated", zap.Int64("rnd", rnd))
 
 	rndMsg := &models.RND{
-		Votes: 1,
+		Votes: 0,
 		Message: &models.RNDMessage{
 			Type:          models.RNDMessageType,
 			SenderAddress: s.BTCkeys.Address,
@@ -90,6 +90,7 @@ func (s *InternalService) rndProcessing(saiBTCAddress, saiP2pAddress, storageTok
 
 	rndMsg.Message.SenderSignature = resp.Signature
 
+	s.GlobalService.Logger.Debug("process - rnd - put msg to storage", zap.Int("block_number", blockNumber), zap.Int("round", rndRound), zap.Any("rndMsg", rndMsg))
 	err, _ = s.Storage.Put(RndMessagesPoolCol, rndMsg, storageToken)
 	if err != nil {
 		s.GlobalService.Logger.Error("process - rnd processing - put to db", zap.Error(err))

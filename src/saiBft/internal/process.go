@@ -38,6 +38,7 @@ const (
 
 // main process of blockchain
 func (s *InternalService) Processing() {
+
 	s.GlobalService.Logger.Debug("starting processing") //DEBUG
 
 	// for tests
@@ -55,22 +56,14 @@ func (s *InternalService) Processing() {
 
 	for _, validator := range s.Validators {
 		if validator == s.BTCkeys.Address {
-			s.IsInitialized = true
 			s.IsValidator = true
 		}
 	}
 
 	s.GlobalService.Logger.Debug("node mode", zap.Bool("is_validator", s.IsValidator)) //DEBUG
 
-	// initial block consensus waiting
-	if !s.IsValidator {
-		for !s.IsInitialized {
-			select {
-			case <-s.InitialSignalCh:
-				s.IsInitialized = true
-				s.GlobalService.Logger.Debug("node was initialized by incoming block consensus msg")
-			}
-		}
+	for !s.IsValidator {
+		time.Sleep(time.Duration(s.GlobalService.Configuration["sleep"].(int)) * time.Second)
 	}
 
 	//TEST transaction &consensus messages
@@ -553,6 +546,7 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 	newBlock.Signatures = append(newBlock.Signatures, btcResp.Signature)
 
 	if len(txMsgs) == 0 {
+		s.GlobalService.Logger.Debug("process - formAndSaveNewBlock - clear consensus")
 		rErr, _ := s.Storage.Remove(ConsensusPoolCol, bson.M{}, storageToken)
 
 		if rErr != nil {

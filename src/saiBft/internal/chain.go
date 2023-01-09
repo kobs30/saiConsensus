@@ -224,7 +224,7 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 					Service.GlobalService.Logger.Error("listenFromSaiP2P - initial block consensus msg - put to storage", zap.Error(err))
 					continue
 				}
-				s.IsInitialized = true
+				//s.IsInitialized = true
 
 				//todo : update parameters coll
 				//s.Validators = append(s.Validators, s.BTCkeys.Address)
@@ -395,6 +395,8 @@ func (s *InternalService) updateBlockchain(msg *models.Block, storageToken, saiP
 			return err
 		}
 	}
+	s.IsInitialized = true
+
 	return nil
 }
 

@@ -169,8 +169,9 @@ getRndForSpecifiedRoundAndBlock:
 		}
 
 		if _rnd > 0 {
+			rnd = _rnd
 			newRndMsg.Votes = 1
-			newRndMsg.Message.Rnd = _rnd
+			newRndMsg.Message.Rnd = rnd
 			newRndMsg.Message.Round = rndRound + 1
 
 			hash, err := newRndMsg.Message.GetHash()

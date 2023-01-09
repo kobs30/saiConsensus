@@ -1,3 +1,6 @@
+upw:
+	docker-compose -f ./microservices/docker-compose-windows.yml up -d
+
 up:
 	docker-compose -f ./microservices/docker-compose.yml up -d
 
@@ -6,22 +9,24 @@ down:
 
 build:
 	make service
-	make docker
 
 service:
 #	cd ./src/saiStorage && go mod tidy && go build -o ../../microservices/saiStorage/build/sai-storage
 	cd ./src/saiBft && go mod tidy && go build -o ../../microservices/saiBft/build/sai-bft
 #	cd ./src/saiBTC && go mod tidy && go build -o ../../microservices/saiBtc/build/sai-btc
-	cd ./src/saiP2pProxy && go mod tidy && go build -o ../../microservices/saiP2pProxy/build/sai-p2p
-	cp ./src/saiP2pProxy/config.yml ./microservices/saiP2pProxy/build/config.yml
-	cp ./src/saiBft/config.yml ./microservices/saiBft/build/config.yml
-	cp ./src/saiBft/btc_keys.json ./microservices/saiBft/build/btc_keys.json
+#	cd ./src/saiP2pProxy && go mod tidy && go build -o ../../microservices/saiP2pProxy/build/sai-p2p
+#	cp ./src/saiP2pProxy/config.yml ./microservices/saiP2pProxy/build/config.yml
+#	cp ./src/saiBft/config.yml ./microservices/saiBft/build/config.yml
+#	cp ./src/saiBft/btc_keys.json ./microservices/saiBft/build/btc_keys.json
 #	cp ./src/saiBTC/saibtc.config ./microservices/saiBtc/build/saibtc.config
 #	cp ./src/saiStorage/config.json ./microservices/saiStorage/build/config.json
 	
 
 docker:
 	docker-compose -f ./microservices/docker-compose.yml up -d --build
+
+dockerw:
+	docker-compose -f ./microservices/docker-compose-windows.yml up -d --build
 
 log:
 	docker-compose -f ./microservices/docker-compose.yml logs -f

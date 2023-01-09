@@ -65,6 +65,17 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				continue
 			}
 
+			err, result := s.Storage.Get(MessagesPoolCol, bson.M{"message_hash": msg.MessageHash}, bson.M{}, storageToken)
+			if err != nil {
+				Service.GlobalService.Logger.Error("listenFromSaiP2P - transactionMsg - get from storage", zap.Error(err))
+				continue
+			}
+
+			if len(result) > 2 {
+				Service.GlobalService.Logger.Error("listenFromSaiP2P - transactionMsg - we have sent this message", zap.Error(err))
+				continue
+			}
+
 			err, _ = s.Storage.Put(MessagesPoolCol, msg, storageToken)
 			if err != nil {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - transactionMsg - put to storage", zap.Error(err))
@@ -216,13 +227,13 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				s.IsInitialized = true
 
 				//todo : update parameters coll
-				s.Validators = append(s.Validators, s.BTCkeys.Address)
+				//s.Validators = append(s.Validators, s.BTCkeys.Address)
 
-				err, _ := s.Storage.Update(ParametersCol, bson.M{}, bson.M{"validators": s.Validators}, storageToken)
-				if err != nil {
-					Service.GlobalService.Logger.Error("listenFromSaiP2P - initial block consensus msg - put to storage", zap.Error(err))
-					continue
-				}
+				//err, _ := s.Storage.Update(ParametersCol, bson.M{}, bson.M{"validators": s.Validators}, storageToken)
+				//if err != nil {
+				//	Service.GlobalService.Logger.Error("listenFromSaiP2P - initial block consensus msg - put to storage", zap.Error(err))
+				//	continue
+				//}
 
 				s.InitialSignalCh <- struct{}{}
 
@@ -443,15 +454,15 @@ func (s *InternalService) handleBlockCandidate(msg *models.Block, saiP2pProxyAdd
 
 		s.GlobalService.Logger.Sugar().Debugf("block candidate was inserted to blockchain collection, blockCandidate : %+v\n", blockCandidate) // DEBUG
 
-		err = s.updateBlockchain(blockCandidate.Block, saiP2pProxyAddress, storageToken, saiP2pAddress)
-		if err != nil {
-			s.GlobalService.Logger.Error("handleBlockConsensusMsg - blockHash = msgBlockHash - update blockchain", zap.Error(err))
-			return err
-		}
+		//err = s.updateBlockchain(blockCandidate.Block, saiP2pProxyAddress, storageToken, saiP2pAddress)
+		//if err != nil {
+		//	s.GlobalService.Logger.Error("handleBlockConsensusMsg - blockHash = msgBlockHash - update blockchain", zap.Error(err))
+		//	return err
+		//}
 	} else {
 		s.GlobalService.Logger.Debug("chain - get block consensus msg - handle block candidate - terminate (less than 70 percent votes got", zap.Int("block candidate votes", blockCandidate.Votes), zap.Float64("required votes", requiredVotes)) // DEBUG
-
 	}
+
 	return nil
 }
 

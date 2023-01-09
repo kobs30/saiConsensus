@@ -110,7 +110,7 @@ func (s *InternalService) Processing() {
 		s.GlobalService.Logger.Sugar().Debugf("ROUND = %d", round) //DEBUG
 		if round == 0 {
 			// get messages with votes = 0
-			transactions, err := s.getZeroVotedTransactions(s.CoreCtx.Value(SaiStorageToken).(string))
+			transactions, err := s.getZeroVotedTransactions(s.CoreCtx.Value(SaiStorageToken).(string), block.Block.Number)
 			if err != nil {
 				s.GlobalService.Logger.Error("process - round == 0 - get zero-voted tx messages", zap.Error(err))
 			}
@@ -152,7 +152,7 @@ func (s *InternalService) Processing() {
 				goto startLoop
 			}
 
-			err = s.broadcastMsg(consensusMsg, s.CoreCtx.Value(SaiBTCaddress).(string))
+			err = s.broadcastMsg(consensusMsg, s.CoreCtx.Value(SaiBTCaddress).(string), false)
 			if err != nil {
 				s.GlobalService.Logger.Error("process - round==0 - broadcast consensus message", zap.Error(err))
 				goto startLoop
@@ -236,7 +236,7 @@ func (s *InternalService) Processing() {
 					goto startLoop
 				}
 
-				err = s.broadcastMsg(newConsensusMsg, s.CoreCtx.Value(SaiP2pAddress).(string))
+				err = s.broadcastMsg(newConsensusMsg, s.CoreCtx.Value(SaiP2pAddress).(string), false)
 				if err != nil {
 					goto startLoop
 				}
@@ -256,7 +256,7 @@ func (s *InternalService) Processing() {
 					goto startLoop
 				}
 
-				err = s.broadcastMsg(newBlock.Block, s.CoreCtx.Value(SaiP2pAddress).(string))
+				err = s.broadcastMsg(newBlock.Block, s.CoreCtx.Value(SaiP2pAddress).(string), false)
 				if err != nil {
 					goto startLoop
 				}
@@ -341,8 +341,8 @@ func (s *InternalService) createInitialBlock(address string) (block *models.Bloc
 }
 
 // get messages with votes = 0
-func (s *InternalService) getZeroVotedTransactions(storageToken string) ([]*models.TransactionMessage, error) {
-	err, result := s.Storage.Get(MessagesPoolCol, bson.M{"votes.0": 0}, bson.M{}, storageToken)
+func (s *InternalService) getZeroVotedTransactions(storageToken string, blockNumber int) ([]*models.TransactionMessage, error) {
+	err, result := s.Storage.Get(MessagesPoolCol, bson.M{"votes.0": 0, "block_number": blockNumber}, bson.M{}, storageToken)
 	if err != nil {
 		s.GlobalService.Logger.Error("process - round = 0 - get messages with 0 votes", zap.Error(err))
 		return nil, err
@@ -463,9 +463,11 @@ func (s *InternalService) getConsensusMsgForTheRound(round, blockNumber int, sto
 }
 
 // broadcast messages to connected nodes
-func (s *InternalService) broadcastMsg(msg interface{}, SaiP2pAddress string) error {
-	if !s.IsValidator {
-		s.GlobalService.Logger.Debug("process - rnd processing can not be started - not a validator")
+func (s *InternalService) broadcastMsg(msg interface{}, SaiP2pAddress string, force bool) error {
+	s.GlobalService.Logger.Debug("process - broadcastMsg - starting broadcast", zap.Any("msg", msg))
+
+	if !s.IsValidator && !force {
+		s.GlobalService.Logger.Debug("process - broadcastMsg - not a validator")
 		return nil
 	}
 

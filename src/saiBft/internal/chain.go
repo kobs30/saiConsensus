@@ -40,15 +40,11 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 
 	for {
 		data := <-s.MsgQueue
-		//s.GlobalService.Logger.Debug("chain - got data", zap.Any("data", data)) // DEBUG
+		s.GlobalService.Logger.Debug("chain - got data", zap.Any("data", data)) // DEBUG
 		switch data.(type) {
 		case *models.Tx:
-			// skip if state is not initialized
-			if !s.IsInitialized {
-				continue
-			}
 			txMsg := data.(*models.Tx)
-			//Service.GlobalService.Logger.Debug("handlers - handleMessage", zap.String("type", txMsg.Type), zap.Any("msg", txMsg)) // DEBUG
+			Service.GlobalService.Logger.Debug("handlers - handleMessage", zap.String("type", txMsg.Type), zap.Any("msg", txMsg)) // DEBUG
 
 			msg := &models.TransactionMessage{
 				Tx:          txMsg,
@@ -152,7 +148,6 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 			if tx.IsFromCli {
 				s.TxHandlerSyncCh <- struct{}{}
 			}
-
 		case *models.ConsensusMessage:
 			// skip if state is not initialized
 			if !s.IsInitialized {
@@ -429,13 +424,24 @@ func (s *InternalService) handleBlockCandidate(msg *models.Block, saiP2pProxyAdd
 
 		blockCandidate.Signatures = append(blockCandidate.Signatures, msg.SenderSignature)
 
-		s.GlobalService.Logger.Debug("chain - handleBlockConsensusMsg - handleBlockCandidate - blockCandidate not found - put to candidates", zap.Int("block_number", msg.Number), zap.String("hash", msg.BlockHash)) // DEBUG
+		if float64(blockCandidate.Votes) >= requiredVotes {
+			s.GlobalService.Logger.Debug("chain - handle block consensus - handle - block candidate - sync block")
 
-		err, _ := s.Storage.Put(BlockCandidatesCol, blockCandidate, storageToken)
-		if err != nil {
-			s.GlobalService.Logger.Error("handleBlockConsensusMsg - blockHash = msgBlockHash - insert block to BlockChain collection", zap.Error(err))
-			return err
+			err, _ := s.Storage.Put(blockchainCol, blockCandidate, storageToken)
+			if err != nil {
+				s.GlobalService.Logger.Error("handleBlockConsensusMsg - blockHash = msgBlockHash - insert block to BlockCandidates collection", zap.Error(err))
+				return err
+			}
+		} else {
+			s.GlobalService.Logger.Debug("chain - handleBlockConsensusMsg - handleBlockCandidate - blockCandidate not found - put to candidates", zap.Int("block_number", msg.Number), zap.String("hash", msg.BlockHash)) // DEBUG
+
+			err, _ := s.Storage.Put(BlockCandidatesCol, blockCandidate, storageToken)
+			if err != nil {
+				s.GlobalService.Logger.Error("handleBlockConsensusMsg - blockHash = msgBlockHash - insert block to BlockChain collection", zap.Error(err))
+				return err
+			}
 		}
+
 		return nil
 	}
 
@@ -453,12 +459,6 @@ func (s *InternalService) handleBlockCandidate(msg *models.Block, saiP2pProxyAdd
 		}
 
 		s.GlobalService.Logger.Sugar().Debugf("block candidate was inserted to blockchain collection, blockCandidate : %+v\n", blockCandidate) // DEBUG
-
-		//err = s.updateBlockchain(blockCandidate.Block, saiP2pProxyAddress, storageToken, saiP2pAddress)
-		//if err != nil {
-		//	s.GlobalService.Logger.Error("handleBlockConsensusMsg - blockHash = msgBlockHash - update blockchain", zap.Error(err))
-		//	return err
-		//}
 	} else {
 		s.GlobalService.Logger.Debug("chain - get block consensus msg - handle block candidate - terminate (less than 70 percent votes got", zap.Int("block candidate votes", blockCandidate.Votes), zap.Float64("required votes", requiredVotes)) // DEBUG
 	}

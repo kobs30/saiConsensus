@@ -38,7 +38,7 @@ func (s *InternalService) saveTestTx(saiBtcAddress, storageToken, saiP2PAddress 
 		s.GlobalService.Logger.Fatal("processing - put test tx msg", zap.Error(err))
 	}
 
-	bcErr := s.broadcastMsg(testTxMsg.Tx, saiP2PAddress)
+	bcErr := s.broadcastMsg(testTxMsg.Tx, saiP2PAddress, false)
 	if bcErr != nil {
 		s.GlobalService.Logger.Fatal("processing - broadcast test tx msg", zap.Error(err))
 	}
@@ -108,7 +108,7 @@ func (s *InternalService) saveTestTx2(saiBtcAddress, storageToken, saiP2PAddress
 		s.GlobalService.Logger.Fatal("processing - put test tx msg", zap.Error(err))
 	}
 
-	bcErr := s.broadcastMsg(testTxMsg.Tx, saiP2PAddress)
+	bcErr := s.broadcastMsg(testTxMsg.Tx, saiP2PAddress, false)
 	if bcErr != nil {
 		s.GlobalService.Logger.Fatal("processing - broadcast test tx msg", zap.Error(err))
 	}

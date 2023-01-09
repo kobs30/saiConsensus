@@ -103,7 +103,7 @@ func (s *InternalService) rndProcessing(saiBTCAddress, saiP2pAddress, storageTok
 	}
 	s.GlobalService.Logger.Debug("process - rnd - put initial rnd msg", zap.Int("rnd", int(rndMsg.Message.Rnd)))
 
-	err = s.broadcastMsg(rndMsg.Message, saiP2pAddress)
+	err = s.broadcastMsg(rndMsg.Message, saiP2pAddress, false)
 	if err != nil {
 		s.GlobalService.Logger.Error("process - rnd processing - broadcast msg", zap.Error(err))
 		return nil, err
@@ -203,7 +203,7 @@ getRndForSpecifiedRoundAndBlock:
 				return nil, err
 			}
 
-			err = s.broadcastMsg(rndMsg.Message, saiP2pAddress)
+			err = s.broadcastMsg(rndMsg.Message, saiP2pAddress, false)
 			if err != nil {
 				s.GlobalService.Logger.Error("processing - rnd processing - broadcast msg", zap.Error(err))
 				return nil, err

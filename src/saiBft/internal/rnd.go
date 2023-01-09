@@ -115,12 +115,13 @@ getRndForSpecifiedRoundAndBlock:
 	s.GlobalService.Logger.Debug("process - rnd processing -  new round", zap.Int("round", rndRound), zap.Int("rnd", int(rnd)))
 
 	// get rnd messages for the round and for block
-	err, result = s.Storage.Get(RndMessagesPoolCol, bson.M{"message.block_number": blockNumber, "message.round": rndRound, "message.sender_address": bson.M{"$ne": s.BTCkeys.Address}}, bson.M{}, storageToken)
+	err, result = s.Storage.Get(RndMessagesPoolCol, bson.M{"message.block_number": blockNumber, "message.round": rndRound}, bson.M{}, storageToken)
 	if err != nil {
 		s.GlobalService.Logger.Error("processing - rnd processing - get rnd for specified round/block", zap.Error(err))
 		return nil, err
 	}
-	//s.GlobalService.Logger.Debug("process - rnd processing - got msg for block and round", zap.Int("block", blockNumber), zap.Int("round", rndRound), zap.String("rnd msgs", string(result)))
+
+	s.GlobalService.Logger.Debug("process - rnd processing - got msg for block and round", zap.Int("block", blockNumber), zap.Int("round", rndRound), zap.String("rnd msgs", string(result)))
 
 	//if specified messages was found
 	if len(result) != 2 {
@@ -141,7 +142,7 @@ getRndForSpecifiedRoundAndBlock:
 		// filter messages which is not from validator list
 		for _, msg := range rndMsgs {
 			for _, validator := range s.Validators {
-				if validator == msg.Message.SenderAddress {
+				if validator == msg.Message.SenderAddress && msg.Message.SenderAddress != s.BTCkeys.Address {
 					filteredRndMsgs = append(filteredRndMsgs, msg)
 				}
 			}
@@ -152,7 +153,7 @@ getRndForSpecifiedRoundAndBlock:
 		var _rnd = rnd
 
 		for _, msg := range filteredRndMsgs {
-			if msg.Message.Rnd == _rnd {
+			if msg.Message.Rnd == rnd {
 				s.GlobalService.Logger.Debug("process - rnd - found rnd msg with the same rnd", zap.Int64("rnd", msg.Message.Rnd), zap.Int("round", rndRound))
 				criteria := bson.M{"message.hash": msg.Message.Hash}
 				update := bson.M{"$inc": bson.M{"votes": 1}}
@@ -161,7 +162,6 @@ getRndForSpecifiedRoundAndBlock:
 					s.GlobalService.Logger.Error("handlers - process - round != 0 - get messages for specified round", zap.Error(err))
 					return nil, err
 				}
-				rnd = _rnd
 			} else {
 				_rnd += msg.Message.Rnd
 			}

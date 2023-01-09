@@ -8,7 +8,7 @@
     port: 8019
   storage_token: "12345"
   #validators: ["15ycVNQF21PzUBFuKXgpKdekFxoRkH4LFT","1Bit5YxmptszS8JUfF7w3jhuw3wBNdLrHV"]
-  validators: ["15ycVNQF21PzUBFuKXgpKdekFxoRkH4LFT", "1Bit5YxmptszS8JUfF7w3jhuw3wBNdLrHV"]
+  validators: ["1Bit5YxmptszS8JUfF7w3jhuw3wBNdLrHV"]
   sleep: 10
   storage_url: "http://sai-storage:8801"
   storage_email: "ddd@mial.com"

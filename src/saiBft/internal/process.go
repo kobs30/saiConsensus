@@ -106,12 +106,12 @@ func (s *InternalService) Processing() {
 			continue
 		}
 
-		//rnd, err := s.rndProcessing(s.CoreCtx.Value(SaiBTCaddress).(string), s.CoreCtx.Value(SaiP2pAddress).(string), s.CoreCtx.Value(SaiStorageToken).(string), block.Block.Number)
-		//if err != nil {
-		//	s.GlobalService.Logger.Error("process - process rnd", zap.Error(err))
-		//	continue
-		//}
-		//s.GlobalService.Logger.Debug("processing - got rnd", zap.Int("block_number", block.Block.Number), zap.Int64("rnd", rnd.Message.Rnd))
+		rnd, err := s.rndProcessing(s.CoreCtx.Value(SaiBTCaddress).(string), s.CoreCtx.Value(SaiP2pAddress).(string), s.CoreCtx.Value(SaiStorageToken).(string), block.Block.Number)
+		if err != nil {
+			s.GlobalService.Logger.Error("process - process rnd", zap.Error(err))
+			continue
+		}
+		s.GlobalService.Logger.Debug("processing - got rnd", zap.Int("block_number", block.Block.Number), zap.Int64("rnd", rnd.Message.Rnd))
 
 	checkRound:
 		s.GlobalService.Logger.Sugar().Debugf("ROUND = %d", round) //DEBUG

@@ -168,9 +168,18 @@ getRndForSpecifiedRoundAndBlock:
 		}
 
 		if _rnd > 0 {
-			rndMsg.Votes = 1
-			rndMsg.Message.Rnd = rnd
-			rndMsg.Message.Round = rndRound + 1
+			rnd = _rnd
+			rndMsg := &models.RND{
+				Votes: 1,
+				Message: &models.RNDMessage{
+					Type:          models.RNDMessageType,
+					SenderAddress: s.BTCkeys.Address,
+					BlockNumber:   blockNumber,
+					Round:         rndRound + 1,
+					Rnd:           rnd,
+					TxMsgHashes:   txMsgsHashes,
+				},
+			}
 
 			hash, err := rndMsg.Message.GetHash()
 			if err != nil {

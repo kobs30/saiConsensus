@@ -63,7 +63,12 @@ func (s *InternalService) Processing() {
 	s.GlobalService.Logger.Debug("node mode", zap.Bool("is_validator", s.IsValidator)) //DEBUG
 
 	for !s.IsValidator {
-		time.Sleep(time.Duration(s.GlobalService.Configuration["sleep"].(int)) * time.Second)
+		select {
+		case <-s.InitialSignalCh:
+			s.IsValidator = true
+			s.GlobalService.Logger.Debug("node was add as validator by incoming block consensus msg")
+			break
+		}
 	}
 
 	//TEST transaction &consensus messages

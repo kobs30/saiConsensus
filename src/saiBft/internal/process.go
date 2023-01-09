@@ -553,8 +553,14 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 	newBlock.Signatures = append(newBlock.Signatures, btcResp.Signature)
 
 	if len(txMsgs) == 0 {
+		rErr, _ := s.Storage.Remove(ConsensusPoolCol, bson.M{}, storageToken)
+
+		if rErr != nil {
+			s.GlobalService.Logger.Error("process - round == 7 - form and save new block - clear Consensus Pool", zap.Error(rErr))
+			return nil, rErr
+		}
+
 		err := s.updateTxMsgZeroVotes(storageToken)
-		s.Storage.Remove(ConsensusPoolCol, bson.M{}, storageToken)
 
 		if err != nil {
 			s.GlobalService.Logger.Error("process - round == 7 - form and save new block - update tx msgs zero votes", zap.Error(err))

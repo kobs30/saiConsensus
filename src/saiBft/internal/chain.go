@@ -65,6 +65,17 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				continue
 			}
 
+			err, result := s.Storage.Get(MessagesPoolCol, bson.M{"message_hash": msg.MessageHash}, bson.M{}, storageToken)
+			if err != nil {
+				Service.GlobalService.Logger.Error("listenFromSaiP2P - transactionMsg - get from storage", zap.Error(err))
+				continue
+			}
+
+			if len(result) > 2 {
+				Service.GlobalService.Logger.Error("listenFromSaiP2P - transactionMsg - we have sent this message", zap.Error(err))
+				continue
+			}
+
 			err, _ = s.Storage.Put(MessagesPoolCol, msg, storageToken)
 			if err != nil {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - transactionMsg - put to storage", zap.Error(err))

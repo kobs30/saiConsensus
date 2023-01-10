@@ -98,7 +98,9 @@ var HandleTxFromCli = saiService.HandlerElement{
 			Service.GlobalService.Logger.Fatal("processing - wrong type of saiP2P address value from config")
 		}
 
-		err = Service.broadcastMsg(transactionMessage.Tx, saiP2Paddress)
+		Service.GlobalService.Logger.Debug("listenFromSaiP2P  - handle tx msg - broadcast tx", zap.Any("msg", transactionMessage.Tx))
+
+		err = Service.broadcastMsg(transactionMessage.Tx, saiP2Paddress, true)
 		if err != nil {
 			Service.GlobalService.Logger.Error("listenFromSaiP2P  - handle tx msg - broadcast tx", zap.Error(err))
 		}
@@ -281,7 +283,7 @@ var GetTx = saiService.HandlerElement{
 			return nil, err
 		}
 
-		txMarshalled, err := json.Marshal(tx)
+		txMarshalled, err := json.Marshal(tx.Tx)
 		if err != nil {
 			Service.GlobalService.Logger.Error("handlers - get-tx - marshal tx", zap.Error(err))
 			return nil, err

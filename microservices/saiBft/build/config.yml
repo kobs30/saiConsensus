@@ -1,5 +1,6 @@
-  socket_host: "localhost"
-  socket_port: 8017
+  socket:
+    host: "localhost"
+    port: 8017
   http:
     enabled: true
     port: 8018

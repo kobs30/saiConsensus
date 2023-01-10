@@ -52,7 +52,6 @@ type jsonRequestType struct {
 
 // BlockConsensus message
 type BlockConsensusMessage struct {
-	Type       string   `json:"type" valid:",required"`
 	BlockHash  string   `json:"block_hash" valid:",required"`
 	Votes      int      `json:"votes"` // additional field, which was not added by Valeriy
 	Block      *Block   `json:"block" valid:",required"`
@@ -61,12 +60,14 @@ type BlockConsensusMessage struct {
 }
 
 type Block struct {
-	Number            int            `json:"number" valid:",required"`
-	PreviousBlockHash string         `json:"prev_block_hash" valid:",required"`
-	SenderAddress     string         `json:"sender_address" valid:",required"`
-	SenderSignature   string         `json:"sender_signature,omitempty" valid:",required"`
-	BlockHash         string         `json:"block_hash"`
-	Messages          map[string]*Tx `json:"messages"`
+	Type              string                         `json:"type" valid:",required"`
+	Number            int                            `json:"number" valid:",required"`
+	PreviousBlockHash string                         `json:"prev_block_hash" valid:",required"`
+	SenderAddress     string                         `json:"sender_address" valid:",required"`
+	SenderSignature   string                         `json:"sender_signature,omitempty" valid:",required"`
+	BlockHash         string                         `json:"block_hash"`
+	Messages          map[string]*TransactionMessage `json:"messages"`
+	BaseRND           int64                          `json:"base_rnd"`
 }
 
 // Validate block consensus message
@@ -75,14 +76,27 @@ func (m *BlockConsensusMessage) Validate() error {
 	return err
 }
 
+// Transaction message
+type TransactionMessage struct {
+	MessageHash  string      `json:"message_hash" valid:",required"`
+	Tx           *Tx         `json:"message" valid:",required"`
+	Votes        [7]uint64   `json:"votes"`
+	VmProcessed  bool        `json:"vm_processed"`
+	VmResult     bool        `json:"vm_result"`
+	VmResponse   interface{} `json:"vm_response"`
+	BlockHash    string      `json:"block_hash"`
+	BlockNumber  int         `json:"block_number"`
+	ExecutedHash string      `json:"executed_hash"`
+}
+
 // transaction struct
 type Tx struct {
-	Type            string `json:"type" valid:",required"`
-	SenderAddress   string `json:"sender_address" valid:",required"`
-	Message         string `json:"message" valid:",required"`
-	SenderSignature string `json:"sender_signature" valid:",required"`
-	MessageHash     string `json:"message_hash" valid:",required"`
-	Nonce           int    `json:"nonce" valid:",required"`
+	Type            string      `json:"type" valid:",required"`
+	SenderAddress   string      `json:"sender_address" valid:",required"`
+	Message         interface{} `json:"message"`
+	SenderSignature string      `json:"sender_signature" valid:",required"`
+	MessageHash     string      `json:"message_hash" valid:",required"`
+	Nonce           int         `json:"nonce"`
 }
 
 type IP struct {

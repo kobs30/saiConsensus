@@ -57,9 +57,6 @@ func (s *InternalService) rndProcessing(saiBTCAddress, saiP2pAddress, storageTok
 
 	rndRound := 0
 
-<<<<<<< HEAD
-	//s.GlobalService.Logger.Debug("process - rnd processing", zap.Any("tx messages candidates", txMsgs), zap.Int("round", rndRound))
-=======
 	err, _ = s.Storage.Remove(RndMessagesPoolCol, bson.M{}, storageToken)
 	if err != nil {
 		s.GlobalService.Logger.Error("process - round == 7 - form and save new block - clear rnd error", zap.Error(err))
@@ -67,7 +64,6 @@ func (s *InternalService) rndProcessing(saiBTCAddress, saiP2pAddress, storageTok
 	}
 
 	s.GlobalService.Logger.Debug("process - rnd processing", zap.Any("tx messages candidates", txMsgs), zap.Int("round", rndRound))
->>>>>>> ce17bd9faf8efac40cf67bc13c4089dbf13eac49
 
 	source := rand.New(rand.NewSource(time.Now().UnixNano()))
 	rnd := source.Int63n(100)

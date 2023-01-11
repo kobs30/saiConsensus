@@ -273,10 +273,6 @@ var GetTx = saiService.HandlerElement{
 
 		Service.GlobalService.Logger.Debug("got message from cli", zap.Strings("data", argsStr))
 
-		if len(argsStr) != 5 {
-			return nil, errors.New("not enough arguments in cli tx method")
-		}
-
 		tx, err := models.CreateTxMsg(Service.CoreCtx, argsStr)
 		if err != nil {
 			Service.GlobalService.Logger.Error("handlers - get-tx - create tx", zap.Error(err))

@@ -131,7 +131,7 @@ func (s *InternalService) Processing() {
 			// validate/execute each tx msg, update hash and votes
 			if len(transactions) != 0 {
 				for _, tx := range transactions {
-					err = s.validateExecuteTransactionMsg(tx, s.CoreCtx.Value(SaiBTCaddress).(string), s.CoreCtx.Value(SaiStorageToken).(string))
+					err = s.validateExecuteTransactionMsg(tx, s.CoreCtx.Value(SaiBTCaddress).(string), s.CoreCtx.Value(SaiP2pAddress).(string), s.CoreCtx.Value(SaiStorageToken).(string))
 					if err != nil {
 						continue
 					}
@@ -397,19 +397,24 @@ func (s *InternalService) getZeroVotedTransactions(storageToken string, blockNum
 	return filteredTx, nil
 }
 
+func (s *InternalService) callVM1(msg *models.TransactionMessage, saiVM1Address string) *models.TransactionMessage {
+	msg.VmProcessed = true
+	msg.VmResponse, msg.VmResult = utils.SendHttpRequest(saiVM1Address, msg)
+
+	return msg
+}
+
 // validate/execute each message, update message and hash and vote for valid messages
-func (s *InternalService) validateExecuteTransactionMsg(msg *models.TransactionMessage, SaiBTCaddress, storageToken string) error {
+func (s *InternalService) validateExecuteTransactionMsg(msg *models.TransactionMessage, saiBTCaddress, saiVM1address, storageToken string) error {
 	s.GlobalService.Logger.Sugar().Debugf("Handling transaction : %+v", msg) //DEBUG
 
-	err := models.ValidateSignature(msg, SaiBTCaddress, msg.Tx.SenderAddress, msg.Tx.SenderSignature)
+	err := utils.ValidateSignature(msg, saiBTCaddress, msg.Tx.SenderAddress, msg.Tx.SenderSignature)
 	if err != nil {
 		s.GlobalService.Logger.Error("process - ValidateExecuteTransactionMsg - validate tx msg signature", zap.Error(err))
 		return err
 	}
 
-	// dummy vm result values after executing at vm
-	msg.VmResult = true
-	msg.VmResponse = "vmResponse"
+	msg = s.callVM1(msg, saiVM1address)
 
 	err = msg.GetExecutedHash()
 	if err != nil {
@@ -419,7 +424,7 @@ func (s *InternalService) validateExecuteTransactionMsg(msg *models.TransactionM
 
 	msg.Votes[0]++
 	filter := bson.M{"message_hash": msg.MessageHash}
-	update := bson.M{"votes": msg.Votes, "vm_processed": true, "vm_result": msg.VmResult, "vm_response": msg.VmResponse, "executed_hash": msg.ExecutedHash}
+	update := bson.M{"votes": msg.Votes, "vm_processed": msg.VmProcessed, "vm_result": msg.VmResult, "vm_response": msg.VmResponse, "executed_hash": msg.ExecutedHash}
 	err, _ = s.Storage.Update("MessagesPool", filter, update, storageToken)
 	if err != nil {
 		Service.GlobalService.Logger.Error("process - ValidateExecuteTransactionMsg - update transactions in storage", zap.Error(err))

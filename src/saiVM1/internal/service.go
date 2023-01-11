@@ -9,6 +9,8 @@ type InternalService struct {
 }
 
 var counter = 0
+var Validators []string
+var Distribution []map[string]int64
 
 func (is InternalService) Init() {
 

@@ -5,6 +5,7 @@ go 1.18
 require github.com/tkanos/gonfig v0.0.0-20210106201359-53e13348de2f
 
 require (
+	github.com/arnaud-lb/php-go v0.0.0-20191205210402-c7fc3a64cdc3 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/gin-gonic/gin v1.8.1 // indirect

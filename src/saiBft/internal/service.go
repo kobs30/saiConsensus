@@ -35,6 +35,7 @@ func Init(svc *saiService.Service) {
 	Service.Handler[HandleMessage.Name] = HandleMessage
 	Service.Handler[CreateBTCKeys.Name] = CreateBTCKeys
 	Service.Handler[GetTx.Name] = GetTx
+	Service.Handler[AddValidator.Name] = AddValidator
 
 	// setting values to core context
 	Service.SetContext(btckeys)
@@ -50,8 +51,8 @@ type InternalService struct {
 	ConnectedSaiP2pNodes map[string]*models.SaiP2pNode
 	BTCkeys              *models.BtcKeys
 	MsgQueue             chan interface{}
-	InitialSignalCh      chan struct{} // chan for notification, if initial block consensus msg was got already
-	IsInitialized        bool          // if inital block consensus msg was got or timeout was passed
+	InitialSignalCh      chan interface{} // chan for notification, if initial block consensus msg was got already
+	IsInitialized        bool             // if inital block consensus msg was got or timeout was passed
 	Storage              utils.Database
 	IpAddress            string // outbound ip address
 	MissedBlocksQueue    chan *models.SyncResponse
@@ -70,7 +71,7 @@ var Service = &InternalService{
 	ConnectedSaiP2pNodes: make(map[string]*models.SaiP2pNode),
 	MsgQueue:             make(chan interface{}),
 	MissedBlocksQueue:    make(chan *models.SyncResponse),
-	InitialSignalCh:      make(chan struct{}),
+	InitialSignalCh:      make(chan interface{}),
 	IsInitialized:        false,
 	MissedBlocksLinkCh:   make(chan string),
 	TxHandlerSyncCh:      make(chan struct{}),

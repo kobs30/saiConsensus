@@ -220,16 +220,6 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 					continue
 				}
 
-				//todo : update parameters coll
-				//s.InitialSignalCh <- struct{}{}
-				//s.Validators = append(s.Validators, s.BTCkeys.Address)
-
-				//err, _ := s.Storage.Update(ParametersCol, bson.M{}, bson.M{"validators": s.Validators}, storageToken)
-				//if err != nil {
-				//	Service.GlobalService.Logger.Error("listenFromSaiP2P - initial block consensus msg - put to storage", zap.Error(err))
-				//	continue
-				//}
-
 				err = s.updateBlockchain(msg, storageToken, saiP2pProxyAddress, saiP2Paddress)
 				if err != nil {
 					Service.GlobalService.Logger.Error("listenFromSaiP2P - initial block consensus msg - update blockchain", zap.Error(err))

@@ -300,3 +300,12 @@ var GetTx = saiService.HandlerElement{
 
 	},
 }
+
+var AddValidator = saiService.HandlerElement{
+	Name:        "add-validator",
+	Description: "add validator",
+	Function: func(data interface{}) (interface{}, error) {
+		Service.InitialSignalCh <- data
+		return "Ok", nil
+	},
+}

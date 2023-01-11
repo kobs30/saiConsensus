@@ -64,7 +64,15 @@ func (s *InternalService) Processing() {
 
 	for !s.IsValidator {
 		select {
-		case <-s.InitialSignalCh:
+		case data := <-s.InitialSignalCh:
+			s.Validators = append(s.Validators, data.(string))
+
+			err, _ := s.Storage.Update(ParametersCol, bson.M{}, bson.M{"validators": s.Validators}, s.CoreCtx.Value(SaiStorageToken).(string))
+			if err != nil {
+				Service.GlobalService.Logger.Error("listenFromSaiP2P - initial block consensus msg - put to storage", zap.Error(err))
+				continue
+			}
+
 			s.IsValidator = true
 			s.GlobalService.Logger.Debug("node was add as validator by incoming block consensus msg")
 			break

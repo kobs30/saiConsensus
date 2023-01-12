@@ -251,7 +251,7 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				continue
 			}
 			err, _ = s.Storage.Put(RndMessagesPoolCol, &models.RND{
-				Votes:   0,
+				Votes:   1,
 				Message: msg,
 			}, storageToken)
 			if err != nil {

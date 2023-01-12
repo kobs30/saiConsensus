@@ -46,3 +46,11 @@ services:
     network_mode: host
     volumes:
       - ./saiP2p/build/p2p_lin64.properties:/srv/p2p_lin64.properties
+
+  sai-vm1:
+    build:
+      context: ./saiVM1
+      dockerfile: Dockerfile
+    network_mode: host
+    volumes:
+      - ./saiVM1/build/config.yml:/srv/config.yml

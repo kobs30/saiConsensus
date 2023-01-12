@@ -34,12 +34,6 @@ type Tx struct {
 	Nonce           int         `json:"nonce"`
 }
 
-// tx message struct
-type TxMessage struct {
-	Method string   `json:"method" valid:",required"`
-	Params []string `json:"params" valid:",required"`
-}
-
 // Validate transaction message
 func (m *TransactionMessage) Validate() error {
 	_, err := valid.ValidateStruct(m)
@@ -76,32 +70,12 @@ func (m *TransactionMessage) GetExecutedHash() error {
 	return nil
 }
 
-func CreateTxMsg(ctx context.Context, argsStr []string) (*TransactionMessage, error) {
-	params := argsStr[1:]
-
-	txMsg := &TxMessage{
-		Method: argsStr[0],
-	}
-
-	txMsg.Params = append(txMsg.Params, params...)
-
-	txMsgBytes, err := json.Marshal(txMsg)
-	if err != nil {
-		return nil, fmt.Errorf("handlers - createTx  -  marshal tx msg: %w", err)
-	}
-
-	m := make(map[string]interface{})
-
-	err = json.Unmarshal(txMsgBytes, &m)
-	if err != nil {
-		return nil, fmt.Errorf("handlers - createTx  -  unmarshal to map: %w", err)
-	}
-
+func CreateTxMsg(ctx context.Context, argStr string) (*TransactionMessage, error) {
 	transactionMessage := &TransactionMessage{
 		Tx: &Tx{
 			Type:          TransactionMsgType,
 			SenderAddress: ctx.Value("saiBTCKeys").(*BtcKeys).Address,
-			Message:       m,
+			Message:       argStr,
 			Nonce:         int(time.Now().Unix()),
 		},
 	}

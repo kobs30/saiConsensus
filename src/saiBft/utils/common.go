@@ -8,8 +8,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"time"
-
-	"github.com/iamthe1whoknocks/bft/models"
 )
 
 // extract result from saiStorage service (crop raw data)
@@ -27,19 +25,6 @@ func ExtractResult(input []byte) ([]byte, error) {
 
 type IP struct {
 	Query string `json:"query"`
-}
-
-// detect message type from saiP2p data input
-func DetectMsgTypeFromMap(m map[string]interface{}) (string, error) {
-	if _, ok := m["block_number"]; ok {
-		return models.ConsensusMsgType, nil
-	} else if _, ok := m["block_hash"]; ok {
-		return models.BlockConsensusMsgType, nil
-	} else if _, ok := m["message"]; ok {
-		return models.TransactionMsgType, nil
-	} else {
-		return "", errors.New("unknown msg type")
-	}
 }
 
 func GetOutboundIP() string {
@@ -60,14 +45,37 @@ func GetOutboundIP() string {
 	return ip.Query
 }
 
-func SendHttpRequest(url string, payload interface{}) (interface{}, bool) {
-	data, err := json.Marshal(payload)
-	if err != nil {
-		fmt.Println("payload marshal error", err)
-		return nil, false
+func UniqueStrings(slice ...[]string) []string {
+	uniqueMap := map[string]bool{}
+
+	for _, intSlice := range slice {
+		for _, s := range intSlice {
+			uniqueMap[s] = true
+		}
 	}
 
-	req, err := http.NewRequest("POST", url, bytes.NewReader(data))
+	// Create a slice with the capacity of unique items
+	// This capacity make appending flow much more efficient
+	result := make([]string, 0, len(uniqueMap))
+
+	for key := range uniqueMap {
+		result = append(result, key)
+	}
+
+	return result
+}
+
+func StringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
+}
+
+func SendHttpRequest(url string, payload []byte) (interface{}, bool) {
+	req, err := http.NewRequest("POST", url, bytes.NewReader(payload))
 
 	if err != nil {
 		fmt.Println("Call VM error: ", err)
@@ -89,5 +97,6 @@ func SendHttpRequest(url string, payload interface{}) (interface{}, bool) {
 		resp.Body.Close()
 	})
 	body, _ := ioutil.ReadAll(resp.Body)
+
 	return body, true
 }

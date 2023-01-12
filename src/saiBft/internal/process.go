@@ -36,6 +36,12 @@ const (
 	btcKeyFile         = "btc_keys.json"
 )
 
+type VmResponse struct {
+	VMProcessed bool        `json:"vm_processed"`
+	VMResult    bool        `json:"vm_result"`
+	VmResponse  interface{} `json:"vm_response"`
+}
+
 // main process of blockchain
 func (s *InternalService) Processing() {
 
@@ -131,7 +137,7 @@ func (s *InternalService) Processing() {
 			// validate/execute each tx msg, update hash and votes
 			if len(transactions) != 0 {
 				for _, tx := range transactions {
-					err = s.validateExecuteTransactionMsg(tx, s.CoreCtx.Value(SaiBTCaddress).(string), s.CoreCtx.Value(SaiP2pAddress).(string), s.CoreCtx.Value(SaiStorageToken).(string))
+					err = s.validateExecuteTransactionMsg(tx, s.CoreCtx.Value(SaiBTCaddress).(string), s.CoreCtx.Value(SaiVM1Address).(string), s.CoreCtx.Value(SaiStorageToken).(string))
 					if err != nil {
 						continue
 					}
@@ -398,8 +404,22 @@ func (s *InternalService) getZeroVotedTransactions(storageToken string, blockNum
 }
 
 func (s *InternalService) callVM1(msg *models.TransactionMessage, saiVM1Address string) *models.TransactionMessage {
-	msg.VmProcessed = true
-	msg.VmResponse, msg.VmResult = utils.SendHttpRequest(saiVM1Address, msg)
+	var parsed VmResponse
+	response, ok := utils.SendHttpRequest(saiVM1Address, []byte(msg.Tx.Message.(string)))
+
+	if ok {
+		err := json.Unmarshal(response.([]byte), &parsed)
+		if err != nil {
+			s.GlobalService.Logger.Error("process - callVM1 - parse vm response error 1", zap.Error(err))
+			return msg
+		}
+
+		msg.VmProcessed = parsed.VMProcessed
+		msg.VmResult = parsed.VMResult
+		msg.VmResponse = parsed.VmResponse
+	} else {
+
+	}
 
 	return msg
 }
@@ -408,7 +428,7 @@ func (s *InternalService) callVM1(msg *models.TransactionMessage, saiVM1Address 
 func (s *InternalService) validateExecuteTransactionMsg(msg *models.TransactionMessage, saiBTCaddress, saiVM1address, storageToken string) error {
 	s.GlobalService.Logger.Sugar().Debugf("Handling transaction : %+v", msg) //DEBUG
 
-	err := utils.ValidateSignature(msg, saiBTCaddress, msg.Tx.SenderAddress, msg.Tx.SenderSignature)
+	err := models.ValidateSignature(msg, saiBTCaddress, msg.Tx.SenderAddress, msg.Tx.SenderSignature)
 	if err != nil {
 		s.GlobalService.Logger.Error("process - ValidateExecuteTransactionMsg - validate tx msg signature", zap.Error(err))
 		return err

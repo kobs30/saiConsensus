@@ -244,7 +244,7 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				continue
 			}
 		case *models.RNDMessage:
-			// skip if state is not initialized
+			//skip if state is not initialized
 			if !s.IsInitialized {
 				continue
 			}

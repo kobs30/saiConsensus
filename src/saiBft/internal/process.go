@@ -57,6 +57,7 @@ func (s *InternalService) Processing() {
 	for _, validator := range s.Validators {
 		if validator == s.BTCkeys.Address {
 			s.IsValidator = true
+			s.IsInitialized = true
 		}
 	}
 

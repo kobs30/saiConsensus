@@ -66,7 +66,8 @@ func (s *InternalService) Processing() {
 	for !s.IsValidator {
 		select {
 		case <-s.InitialSignalCh:
-			s.IsValidator = true
+			//s.IsValidator = true
+			s.IsInitialized = true
 			s.GlobalService.Logger.Debug("node was add as validator by incoming block consensus msg")
 			break
 		}

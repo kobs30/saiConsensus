@@ -221,7 +221,7 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				}
 
 				//todo : update parameters coll
-				//s.InitialSignalCh <- struct{}{}
+				s.InitialSignalCh <- struct{}{}
 				//s.Validators = append(s.Validators, s.BTCkeys.Address)
 
 				//err, _ := s.Storage.Update(ParametersCol, bson.M{}, bson.M{"validators": s.Validators}, storageToken)

@@ -318,7 +318,7 @@ func (s *InternalService) createInitialBlock(address string) (block *models.Bloc
 			Number:            1,
 			SenderAddress:     s.BTCkeys.Address,
 			PreviousBlockHash: "",
-			Messages:          make(map[string]*models.TransactionMessage),
+			Messages:          make([]*models.TransactionMessage, 0),
 		},
 	}
 
@@ -519,7 +519,7 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 			Number:            previousBlock.Block.Number,
 			PreviousBlockHash: previousBlock.BlockHash,
 			SenderAddress:     s.BTCkeys.Address,
-			Messages:          make(map[string]*models.TransactionMessage),
+			Messages:          make([]*models.TransactionMessage, 0),
 		},
 	}
 
@@ -539,7 +539,7 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 		}
 		tx.BlockHash = newBlock.BlockHash
 		tx.BlockNumber = newBlock.Block.Number
-		newBlock.Block.Messages[tx.ExecutedHash] = tx
+		newBlock.Block.Messages = append(newBlock.Block.Messages, tx)
 	}
 
 	btcResp, err := models.SignMessage(newBlock.Block, SaiBTCaddress, s.BTCkeys.Private)

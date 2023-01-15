@@ -35,6 +35,7 @@ func Init(svc *saiService.Service) {
 	Service.Handler[HandleMessage.Name] = HandleMessage
 	Service.Handler[CreateBTCKeys.Name] = CreateBTCKeys
 	Service.Handler[GetTx.Name] = GetTx
+	Service.Handler[AddValidator.Name] = AddValidator
 
 	// setting values to core context
 	Service.SetContext(btckeys)

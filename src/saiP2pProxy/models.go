@@ -60,14 +60,14 @@ type BlockConsensusMessage struct {
 }
 
 type Block struct {
-	Type              string                         `json:"type" valid:",required"`
-	Number            int                            `json:"number" valid:",required"`
-	PreviousBlockHash string                         `json:"prev_block_hash" valid:",required"`
-	SenderAddress     string                         `json:"sender_address" valid:",required"`
-	SenderSignature   string                         `json:"sender_signature,omitempty" valid:",required"`
-	BlockHash         string                         `json:"block_hash"`
-	Messages          map[string]*TransactionMessage `json:"messages"`
-	BaseRND           int64                          `json:"base_rnd"`
+	Type              string                `json:"type" valid:",required"`
+	Number            int                   `json:"number" valid:",required"`
+	PreviousBlockHash string                `json:"prev_block_hash" valid:",required"`
+	SenderAddress     string                `json:"sender_address" valid:",required"`
+	SenderSignature   string                `json:"sender_signature,omitempty" valid:",required"`
+	BlockHash         string                `json:"block_hash"`
+	Messages          []*TransactionMessage `json:"messages"`
+	BaseRND           int64                 `json:"base_rnd"`
 }
 
 // Validate block consensus message

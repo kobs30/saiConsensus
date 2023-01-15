@@ -10,6 +10,7 @@ import (
 
 	"github.com/iamthe1whoknocks/bft/models"
 	"github.com/iamthe1whoknocks/saiService"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.uber.org/zap"
 )
 
@@ -298,5 +299,108 @@ var GetTx = saiService.HandlerElement{
 		}
 		return m, nil
 
+	},
+}
+
+// AddValidator adds validator
+var AddValidator = saiService.HandlerElement{
+	Name:        "addValidator",
+	Description: "add validator",
+	Function: func(data interface{}) (interface{}, error) {
+		requestData, ok := data.(map[string]interface{})
+		if !ok {
+			err := fmt.Errorf("wrong type of incoming data,incoming data : %s, type : %+v", data, reflect.TypeOf(data))
+			Service.GlobalService.Logger.Error("handlers - addValidator - type assertion to map[string]interface", zap.Error(err))
+			return nil, fmt.Errorf("wrong type of incoming data")
+		}
+
+		Service.GlobalService.Logger.Debug("handlers - addValidator - got request", zap.Any("raw response data", requestData))
+
+		dataInBytes, err := json.Marshal(requestData)
+		if err != nil {
+			Service.GlobalService.Logger.Error("handlers - addValidator - marshal sync response", zap.Error(err))
+			return nil, err
+		}
+		request := models.AddValidatorRequest{}
+
+		err = json.Unmarshal(dataInBytes, &request)
+		if err != nil {
+			Service.GlobalService.Logger.Error("handlers - addValidator - unmarshal response", zap.Error(err))
+			return nil, err
+		}
+
+		err = request.Validate()
+		if err != nil {
+			Service.GlobalService.Logger.Error("handlers - addValidator - validate request", zap.Error(err))
+			return nil, err
+		}
+
+		err = models.ValidateSignature(&request, Service.CoreCtx.Value(SaiBTCaddress).(string), request.AddressFrom, request.Signature)
+		if err != nil {
+			Service.GlobalService.Logger.Error("handlers - addValidator - validate signature", zap.Error(err))
+			return nil, err
+		}
+
+		Service.Validators = append(Service.Validators, request.AddressToAdd)
+
+		err, _ = Service.Storage.Update(ParametersCol, bson.M{}, bson.M{"validators": Service.Validators}, Service.CoreCtx.Value(SaiStorageToken).(string))
+		if err != nil {
+			Service.GlobalService.Logger.Error("handlers - addValidator - update validators in storage", zap.Error(err))
+			return nil, err
+		}
+
+		return "ok", nil
+	},
+}
+
+// get last block from blockchain
+// todo : not done yet
+var GetLastBlock = saiService.HandlerElement{
+	Name:        "GetLastBlock",
+	Description: "get last block from blockchain",
+	Function: func(data interface{}) (interface{}, error) {
+		requestData, ok := data.(map[string]interface{})
+		if !ok {
+			err := fmt.Errorf("wrong type of incoming data,incoming data : %s, type : %+v", data, reflect.TypeOf(data))
+			Service.GlobalService.Logger.Error("handlers - addValidator - type assertion to map[string]interface", zap.Error(err))
+			return nil, fmt.Errorf("wrong type of incoming data")
+		}
+
+		Service.GlobalService.Logger.Debug("handlers - addValidator - got request", zap.Any("raw response data", requestData))
+
+		dataInBytes, err := json.Marshal(requestData)
+		if err != nil {
+			Service.GlobalService.Logger.Error("handlers - addValidator - marshal sync response", zap.Error(err))
+			return nil, err
+		}
+		request := models.AddValidatorRequest{}
+
+		err = json.Unmarshal(dataInBytes, &request)
+		if err != nil {
+			Service.GlobalService.Logger.Error("handlers - addValidator - unmarshal response", zap.Error(err))
+			return nil, err
+		}
+
+		err = request.Validate()
+		if err != nil {
+			Service.GlobalService.Logger.Error("handlers - addValidator - validate request", zap.Error(err))
+			return nil, err
+		}
+
+		err = models.ValidateSignature(&request, Service.CoreCtx.Value(SaiBTCaddress).(string), request.AddressFrom, request.Signature)
+		if err != nil {
+			Service.GlobalService.Logger.Error("handlers - addValidator - validate signature", zap.Error(err))
+			return nil, err
+		}
+
+		Service.Validators = append(Service.Validators, request.AddressToAdd)
+
+		err, _ = Service.Storage.Update(ParametersCol, bson.M{}, bson.M{"validators": Service.Validators}, Service.CoreCtx.Value(SaiStorageToken).(string))
+		if err != nil {
+			Service.GlobalService.Logger.Error("handlers - addValidator - update validators in storage", zap.Error(err))
+			return nil, err
+		}
+
+		return "ok", nil
 	},
 }

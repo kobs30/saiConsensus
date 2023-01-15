@@ -63,13 +63,14 @@ func (s *InternalService) Processing() {
 
 	s.GlobalService.Logger.Debug("node mode", zap.Bool("is_validator", s.IsValidator)) //DEBUG
 
+initloop:
 	for !s.IsValidator {
 		select {
 		case <-s.InitialSignalCh:
 			//s.IsValidator = true
 			s.IsInitialized = true
 			s.GlobalService.Logger.Debug("node was add as validator by incoming block consensus msg")
-			break
+			break initloop
 		}
 	}
 

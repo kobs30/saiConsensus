@@ -137,7 +137,7 @@ func (s *InternalService) Processing() {
 			// validate/execute each tx msg, update hash and votes
 			if len(transactions) != 0 {
 				for _, tx := range transactions {
-					err = s.validateExecuteTransactionMsg(tx, s.CoreCtx.Value(SaiBTCaddress).(string), s.CoreCtx.Value(SaiVM1Address).(string), s.CoreCtx.Value(SaiStorageToken).(string))
+					err = s.validateExecuteTransactionMsg(tx, rnd.Message.Rnd, s.CoreCtx.Value(SaiBTCaddress).(string), s.CoreCtx.Value(SaiVM1Address).(string), s.CoreCtx.Value(SaiStorageToken).(string))
 					if err != nil {
 						continue
 					}
@@ -403,9 +403,13 @@ func (s *InternalService) getZeroVotedTransactions(storageToken string, blockNum
 	return filteredTx, nil
 }
 
-func (s *InternalService) callVM1(msg *models.TransactionMessage, saiVM1Address string) *models.TransactionMessage {
+func (s *InternalService) callVM1(msg *models.TransactionMessage, rnd int64, saiVM1Address string) *models.TransactionMessage {
 	var parsed VmResponse
-	response, ok := utils.SendHttpRequest(saiVM1Address, []byte(msg.Tx.Message.(string)))
+	response, ok := utils.SendHttpRequest(saiVM1Address, bson.M{
+		"rnd":     rnd,
+		"tx":      msg.Tx,
+		"message": msg.Tx.Message,
+	})
 
 	if ok {
 		err := json.Unmarshal(response.([]byte), &parsed)
@@ -425,7 +429,7 @@ func (s *InternalService) callVM1(msg *models.TransactionMessage, saiVM1Address 
 }
 
 // validate/execute each message, update message and hash and vote for valid messages
-func (s *InternalService) validateExecuteTransactionMsg(msg *models.TransactionMessage, saiBTCaddress, saiVM1address, storageToken string) error {
+func (s *InternalService) validateExecuteTransactionMsg(msg *models.TransactionMessage, rnd int64, saiBTCaddress, saiVM1address, storageToken string) error {
 	s.GlobalService.Logger.Sugar().Debugf("Handling transaction : %+v", msg) //DEBUG
 
 	err := models.ValidateSignature(msg, saiBTCaddress, msg.Tx.SenderAddress, msg.Tx.SenderSignature)
@@ -434,7 +438,7 @@ func (s *InternalService) validateExecuteTransactionMsg(msg *models.TransactionM
 		return err
 	}
 
-	msg = s.callVM1(msg, saiVM1address)
+	msg = s.callVM1(msg, rnd, saiVM1address)
 
 	err = msg.GetExecutedHash()
 	if err != nil {

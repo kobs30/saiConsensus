@@ -74,8 +74,14 @@ func StringInSlice(a string, list []string) bool {
 	return false
 }
 
-func SendHttpRequest(url string, payload []byte) (interface{}, bool) {
-	req, err := http.NewRequest("POST", url, bytes.NewReader(payload))
+func SendHttpRequest(url string, payload interface{}) (interface{}, bool) {
+	data, err := json.Marshal(payload)
+	if err != nil {
+		fmt.Println("payload marshal error", err)
+		return nil, false
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewReader(data))
 
 	if err != nil {
 		fmt.Println("Call VM error: ", err)

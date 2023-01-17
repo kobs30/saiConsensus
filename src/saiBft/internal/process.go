@@ -406,6 +406,7 @@ func (s *InternalService) getZeroVotedTransactions(storageToken string, blockNum
 func (s *InternalService) callVM1(msg *models.TransactionMessage, rnd int64, saiVM1Address string) *models.TransactionMessage {
 	var parsed VmResponse
 	response, ok := utils.SendHttpRequest(saiVM1Address, bson.M{
+		"method":  "execute",
 		"rnd":     rnd,
 		"tx":      msg.Tx,
 		"message": msg.Tx.Message,

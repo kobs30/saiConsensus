@@ -70,7 +70,7 @@ func (s *InternalService) rndProcessing(saiBTCAddress, saiP2pAddress, storageTok
 	s.GlobalService.Logger.Debug("rnd generated", zap.Int64("rnd", rnd))
 
 	rndMsg := &models.RND{
-		Votes: 1,
+		Votes: 0,
 		Message: &models.RNDMessage{
 			Type:          models.RNDMessageType,
 			SenderAddress: s.BTCkeys.Address,

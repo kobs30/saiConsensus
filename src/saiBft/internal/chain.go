@@ -459,6 +459,12 @@ func (s *InternalService) handleBlockCandidate(msg *models.Block, saiP2pProxyAdd
 		}
 
 		s.GlobalService.Logger.Sugar().Debugf("block candidate was inserted to blockchain collection, blockCandidate : %+v\n", blockCandidate) // DEBUG
+
+		err = s.updateBlockchain(blockCandidate.Block, s.CoreCtx.Value(SaiStorageToken).(string), s.CoreCtx.Value(saiP2pProxyAddress).(string), s.CoreCtx.Value(saiP2pAddress).(string))
+		if err != nil {
+			s.GlobalService.Logger.Error("chain - handleBlockConsensusMsg - handleBlockCandidate - updateBlockchain", zap.Error(err))
+			return err
+		}
 	} else {
 		s.GlobalService.Logger.Debug("chain - get block consensus msg - handle block candidate - terminate (less than 70 percent votes got", zap.Int("block candidate votes", blockCandidate.Votes), zap.Float64("required votes", requiredVotes)) // DEBUG
 	}
@@ -546,15 +552,15 @@ func (s *InternalService) GetMissedBlocks(blockNumber int, storageToken string) 
 			continue
 		}
 
-		for i, b := range blocks {
+		for _, b := range blocks {
 			//			s.GlobalService.Logger.Debug("chain - get missed blocks - range for blocks to put in map", zap.Int("block_number", b.Block.Number), zap.String("hash", b.BlockHash))
 			block, ok := tempMap[b.Block.Number]
 			if ok {
 				if block.Votes < b.Votes {
-					tempMap[b.Block.Number] = &blocks[i]
+					tempMap[b.Block.Number] = &b
 				}
 			} else {
-				tempMap[b.Block.Number] = &blocks[i]
+				tempMap[b.Block.Number] = block
 			}
 		}
 

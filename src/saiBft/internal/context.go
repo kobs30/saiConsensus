@@ -16,6 +16,7 @@ const (
 	SaiDuplicateStorageRequests         = "duplicate_storage_requests"
 	SaiDuplicateStorageRequestsURL      = "duplicate_storage_requests_url"
 	SaiDuplicateStorageRequestsInterval = "duplicate_storage_requests_interval"
+	SaiP2pProxyAddress                  = "saiProxy_address"
 )
 
 func (s *InternalService) SetContext(btcKeys *models.BtcKeys) {
@@ -52,6 +53,11 @@ func (s *InternalService) SetContext(btcKeys *models.BtcKeys) {
 		duplicateRequestsInterval = 0
 	}
 
+	p2pProxyAddress, ok := s.GlobalService.Configuration["saiProxy_address"].(string)
+	if !ok {
+		s.GlobalService.Logger.Fatal("processing - wrong type of saiProxy address value from config")
+	}
+
 	s.CoreCtx = context.WithValue(context.Background(), SaiBTCaddress, btcAddress)
 	s.CoreCtx = context.WithValue(s.CoreCtx, SaiP2pAddress, p2pAddress)
 	s.CoreCtx = context.WithValue(s.CoreCtx, SaiStorageToken, storageToken)
@@ -60,4 +66,5 @@ func (s *InternalService) SetContext(btcKeys *models.BtcKeys) {
 	s.CoreCtx = context.WithValue(s.CoreCtx, SaiDuplicateStorageRequests, duplicateRequests)
 	s.CoreCtx = context.WithValue(s.CoreCtx, SaiDuplicateStorageRequestsURL, duplicateRequestsUrl)
 	s.CoreCtx = context.WithValue(s.CoreCtx, SaiDuplicateStorageRequestsInterval, duplicateRequestsInterval)
+	s.CoreCtx = context.WithValue(s.CoreCtx, SaiP2pProxyAddress, p2pProxyAddress)
 }

@@ -137,7 +137,7 @@ func (s *InternalService) Processing() {
 			// validate/execute each tx msg, update hash and votes
 			if len(transactions) != 0 {
 				for _, tx := range transactions {
-					err = s.validateExecuteTransactionMsg(tx, rnd.Message.Rnd, s.CoreCtx.Value(SaiBTCaddress).(string), s.CoreCtx.Value(SaiVM1Address).(string), s.CoreCtx.Value(SaiStorageToken).(string))
+					err = s.validateExecuteTransactionMsg(tx, rnd.Message.Rnd, block.Block.Number, s.CoreCtx.Value(SaiBTCaddress).(string), s.CoreCtx.Value(SaiVM1Address).(string), s.CoreCtx.Value(SaiStorageToken).(string))
 					if err != nil {
 						continue
 					}
@@ -403,13 +403,16 @@ func (s *InternalService) getZeroVotedTransactions(storageToken string, blockNum
 	return filteredTx, nil
 }
 
-func (s *InternalService) callVM1(msg *models.TransactionMessage, rnd int64, saiVM1Address string) *models.TransactionMessage {
+func (s *InternalService) callVM1(msg *models.TransactionMessage, rnd int64, block int, saiVM1Address string) *models.TransactionMessage {
 	var parsed VmResponse
 	response, ok := utils.SendHttpRequest(saiVM1Address, bson.M{
-		"method":  "execute",
-		"rnd":     rnd,
-		"tx":      msg.Tx,
-		"message": msg.Tx.Message,
+		"method": "execute",
+		"data": bson.M{
+			"block":   block,
+			"rnd":     rnd,
+			"tx":      msg.Tx,
+			"message": msg.Tx.Message,
+		},
 	})
 
 	if ok {
@@ -430,7 +433,7 @@ func (s *InternalService) callVM1(msg *models.TransactionMessage, rnd int64, sai
 }
 
 // validate/execute each message, update message and hash and vote for valid messages
-func (s *InternalService) validateExecuteTransactionMsg(msg *models.TransactionMessage, rnd int64, saiBTCaddress, saiVM1address, storageToken string) error {
+func (s *InternalService) validateExecuteTransactionMsg(msg *models.TransactionMessage, rnd int64, block int, saiBTCaddress, saiVM1address, storageToken string) error {
 	s.GlobalService.Logger.Sugar().Debugf("Handling transaction : %+v", msg) //DEBUG
 
 	err := models.ValidateSignature(msg, saiBTCaddress, msg.Tx.SenderAddress, msg.Tx.SenderSignature)
@@ -439,7 +442,7 @@ func (s *InternalService) validateExecuteTransactionMsg(msg *models.TransactionM
 		return err
 	}
 
-	msg = s.callVM1(msg, rnd, saiVM1address)
+	msg = s.callVM1(msg, rnd, block, saiVM1address)
 
 	err = msg.GetExecutedHash()
 	if err != nil {

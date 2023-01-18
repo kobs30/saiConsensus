@@ -1,20 +1,21 @@
 package main
 
 import (
-	"github.com/saiset-co/Boilerplate/internal"
 	"github.com/saiset-co/saiService"
+	"github.com/saiset-co/saiVM1/internal"
 )
 
 func main() {
 	svc := saiService.NewService("sai_VM1")
-	is := internal.InternalService{Context: svc.Context}
+	is := internal.Service(svc.Context)
 
 	svc.RegisterConfig("config.yml")
 
 	svc.RegisterHandlers(
-		is.NewHandler(),
+		is.Handlers(),
 	)
 
-	svc.Start()
+	svc.RegisterInitTask(is.Init)
 
+	svc.Start()
 }

@@ -8,7 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-func (is InternalService) NewHandler() saiService.Handler {
+func (is InternalService) Handlers() saiService.Handler {
 	return saiService.Handler{
 		"execute": saiService.HandlerElement{
 			Name:        "execute",

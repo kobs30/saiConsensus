@@ -20,5 +20,5 @@ func Service(context *saiService.Context) InternalService {
 var counter = 0
 
 func (is InternalService) Init() {
-	is.Storage = utils.Storage(is.Context.GetConfig("storage.url", "").(string), is.Context.GetConfig("storage.token", "").(string))
+	is.Storage = utils.Storage(is.Context.GetConfig("service.storage.url", "").(string), is.Context.GetConfig("service.storage.token", "").(string))
 }

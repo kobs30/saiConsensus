@@ -10,7 +10,6 @@ import (
 
 	"github.com/iamthe1whoknocks/bft/models"
 	"github.com/iamthe1whoknocks/saiService"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.uber.org/zap"
 )
 

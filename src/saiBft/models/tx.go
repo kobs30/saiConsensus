@@ -45,6 +45,8 @@ func (m *Tx) GetHash() (string, error) {
 	b, err := json.Marshal(&Tx{
 		SenderAddress: m.SenderAddress,
 		Message:       m.Message,
+		Nonce:         m.Nonce,
+		Type:          m.Type,
 	})
 	if err != nil {
 		return "", err

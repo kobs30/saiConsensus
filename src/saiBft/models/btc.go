@@ -70,6 +70,8 @@ func ValidateSignature(msg interface{}, address, SenderAddress, signature string
 		b, err = json.Marshal(&Tx{
 			SenderAddress: txMsg.Tx.SenderAddress,
 			Message:       txMsg.Tx.Message,
+			Nonce:         txMsg.Tx.Nonce,
+			Type:          txMsg.Tx.Type,
 		})
 		if err != nil {
 			return fmt.Errorf("marshal TransactionMessage : %w", err)
@@ -139,6 +141,8 @@ func SignMessage(msg interface{}, address, privateKey string) (resp *SignMessage
 		data, err := json.Marshal(&Tx{
 			SenderAddress: TxMsg.Tx.SenderAddress,
 			Message:       TxMsg.Tx.Message,
+			Nonce:         TxMsg.Tx.Nonce,
+			Type:          TxMsg.Tx.Type,
 		})
 		if err != nil {
 			return nil, err
@@ -149,6 +153,8 @@ func SignMessage(msg interface{}, address, privateKey string) (resp *SignMessage
 		data, err := json.Marshal(&Tx{
 			SenderAddress: TxMsg.SenderAddress,
 			Message:       TxMsg.Message,
+			Nonce:         TxMsg.Nonce,
+			Type:          TxMsg.Type,
 		})
 		if err != nil {
 			return nil, err

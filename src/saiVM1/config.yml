@@ -9,5 +9,5 @@ common:
     port: 8099
 service:
   storage:
-    url: "http://sai-storage:8801"
+    url: "http://185.229.119.188:8801"
     token: "12345"

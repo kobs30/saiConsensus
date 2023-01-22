@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 
 	valid "github.com/asaskevich/govalidator"
 )
@@ -35,16 +36,48 @@ func (m *Block) Validate() error {
 }
 
 // Hashing block  message
-func (m *Block) GetHash() (string, error) {
+func (m *Block) SetHash() error {
 	b, err := json.Marshal(&Block{
 		Number:            m.Number,
 		PreviousBlockHash: m.PreviousBlockHash,
 		Messages:          m.Messages,
 	})
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	hash := sha256.Sum256(b)
-	return hex.EncodeToString(hash[:]), nil
+	m.BlockHash = hex.EncodeToString(hash[:])
+	return nil
+}
+
+func (m *Block) SignMessage(address, privateKey string) error {
+	data, err := json.Marshal(&Block{
+		Number:            m.Number,
+		PreviousBlockHash: m.PreviousBlockHash,
+		Messages:          m.Messages,
+		SenderAddress:     m.SenderAddress,
+	})
+	if err != nil {
+		return err
+	}
+	preparedString := fmt.Sprintf("method=signMessage&p=%s&message=%s", privateKey, string(data))
+	signature, err := getBTCResponse(preparedString, address)
+	if err != nil {
+		return err
+	}
+	m.SenderSignature = signature
+	return nil
+}
+
+func (m *Block) HashAndSign(address, privateKey string) error {
+	err := m.SetHash()
+	if err != nil {
+		return err
+	}
+	err = m.SignMessage(address, privateKey)
+	if err != nil {
+		return err
+	}
+	return nil
 }

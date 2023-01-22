@@ -1,7 +1,6 @@
 package models
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -73,17 +72,17 @@ func (m *TransactionMessage) GetExecutedHash() error {
 	return nil
 }
 
-func CreateTxMsg(ctx context.Context, argStr string) (*TransactionMessage, error) {
+func CreateTxMsg(keys *BtcKeys, address string, argStr string) (*TransactionMessage, error) {
 	transactionMessage := &TransactionMessage{
 		Tx: &Tx{
 			Type:          TransactionMsgType,
-			SenderAddress: ctx.Value("saiBTCKeys").(*BtcKeys).Address,
+			SenderAddress: keys.Address,
 			Message:       argStr,
 			Nonce:         int(time.Now().Unix()),
 		},
 	}
 
-	err := transactionMessage.HashAndSign(ctx.Value("saiBTC_address").(string), ctx.Value("saiBTCKeys").(*BtcKeys).Private)
+	err := transactionMessage.HashAndSign(address, keys.Private)
 	if err != nil {
 		return nil, err
 	}

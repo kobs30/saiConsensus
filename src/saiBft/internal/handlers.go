@@ -65,7 +65,8 @@ var HandleTxFromCli = saiService.HandlerElement{
 			IsFromCli: false,
 		}
 
-		transactionMessage, err := models.CreateTxMsg(Service.CoreCtx, data.(string))
+		transactionMessage, err := models.CreateTxMsg(Service.BTCkeys, Service.GlobalService.GetConfig(SaiBTCaddress, "").String(), data.(string))
+
 		if err != nil {
 			Service.GlobalService.Logger.Error("handlers - get-tx - create tx", zap.Error(err))
 			return nil, err
@@ -227,7 +228,7 @@ var GetTx = saiService.HandlerElement{
 	Name:        "get-tx",
 	Description: "return tx message",
 	Function: func(data interface{}) (interface{}, error) {
-		tx, err := models.CreateTxMsg(Service.CoreCtx, data.(string))
+		tx, err := models.CreateTxMsg(Service.BTCkeys, Service.GlobalService.GetConfig(SaiBTCaddress, "").String(), data.(string))
 		if err != nil {
 			Service.GlobalService.Logger.Error("handlers - get-tx - create tx", zap.Error(err))
 			return nil, err

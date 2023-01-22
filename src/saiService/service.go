@@ -22,6 +22,22 @@ type Service struct {
 	Logger        *zap.Logger
 }
 
+type GetConfigResult struct {
+	Data interface{}
+}
+
+func (r *GetConfigResult) String() string {
+	return r.Data.(string)
+}
+
+func (r *GetConfigResult) Int() int {
+	return r.Data.(int)
+}
+
+func (r *GetConfigResult) Bool() bool {
+	return r.Data.(bool)
+}
+
 var (
 	svc  = new(Service)
 	eos  = []byte("\n")
@@ -62,7 +78,7 @@ func (s *Service) RegisterInitTask(initTask func()) {
 	s.InitTask = initTask
 }
 
-func (s *Service) GetConfig(path string, def interface{}) interface{} {
+func (s *Service) GetConfig(path string, def interface{}) *GetConfigResult {
 	steps := strings.Split(path, ".")
 	configuration := s.Configuration
 
@@ -74,17 +90,27 @@ func (s *Service) GetConfig(path string, def interface{}) interface{} {
 			configuration = val.(map[string]interface{})
 			break
 		case string:
-			return val.(string)
+			return &GetConfigResult{
+				Data: val.(string),
+			}
 		case int:
-			return val.(int)
+			return &GetConfigResult{
+				Data: val.(int),
+			}
 		case bool:
-			return val.(bool)
+			return &GetConfigResult{
+				Data: val.(bool),
+			}
 		default:
-			return def
+			return &GetConfigResult{
+				Data: def,
+			}
 		}
 	}
 
-	return def
+	return &GetConfigResult{
+		Data: def,
+	}
 }
 
 func (s *Service) Start() {
@@ -136,8 +162,8 @@ func (s *Service) ExecuteCommand(path string, data []string, mode string) error 
 
 func (s *Service) StartServices() {
 
-	useHttp := s.GetConfig("common.http.enabled", true).(bool)
-	useWS := s.GetConfig("common.ws.enabled", true).(bool)
+	useHttp := s.GetConfig("common.http.enabled", true).Bool()
+	useWS := s.GetConfig("common.ws.enabled", true).Bool()
 
 	if useHttp {
 		go s.StartHttp()

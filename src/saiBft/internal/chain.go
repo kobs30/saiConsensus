@@ -450,7 +450,7 @@ func (s *InternalService) handleBlockCandidate(msg *models.Block, saiP2pProxyAdd
 
 		s.GlobalService.Logger.Sugar().Debugf("block candidate was inserted to blockchain collection, blockCandidate : %+v\n", blockCandidate) // DEBUG
 
-		err = s.updateBlockchain(blockCandidate.Block, s.CoreCtx.Value(SaiStorageToken).(string), s.CoreCtx.Value(saiP2pProxyAddress).(string), s.CoreCtx.Value(saiP2pAddress).(string))
+		err = s.updateBlockchain(blockCandidate.Block, s.GlobalService.GetConfig(SaiStorageToken, "").String(), s.GlobalService.GetConfig(saiP2pProxyAddress, "").String(), s.GlobalService.GetConfig(saiP2pAddress, "").String())
 		if err != nil {
 			s.GlobalService.Logger.Error("chain - handleBlockConsensusMsg - handleBlockCandidate - updateBlockchain", zap.Error(err))
 			return err

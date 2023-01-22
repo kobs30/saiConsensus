@@ -112,7 +112,7 @@ nextRound:
 		return 0, err
 	}
 
-	time.Sleep(time.Duration(s.CoreCtx.Value(SaiSleep).(int)) * time.Second)
+	time.Sleep(time.Duration(s.GlobalService.GetConfig(SaiSleep, 4).Int()) * time.Second)
 
 	resultMap, err := s.GetResultRoundMap(blockNumber, rndRound)
 	if err != nil {
@@ -143,12 +143,13 @@ nextRound:
 	if baseRndExists {
 		return baseRnd, nil
 	} else {
-		rnd, err := getRndFromDirectMsg()
-		if err != nil {
-			s.GlobalService.Logger.Error("process - rnd processing -  get rnd form direct connection", zap.Error(err))
-			return 0, err
-		}
+		// rnd, err := getRndFromDirectMsg()
+		// if err != nil {
+		// 	s.GlobalService.Logger.Error("process - rnd processing -  get rnd form direct connection", zap.Error(err))
+		// 	return 0, err
+		// }
 	}
+	return 0, nil
 }
 
 // 	// get rnd messages for the round and for block
@@ -323,7 +324,7 @@ nextRound:
 // }
 
 func (s *InternalService) GetResultRoundMap(blockNumber, round int) (map[int64]int, error) {
-	err, rndResult := s.Storage.Get(RndMessagesPoolCol, bson.M{"message.block_number": blockNumber, "message.round": round}, bson.M{}, s.CoreCtx.Value(SaiStorageToken).(string))
+	err, rndResult := s.Storage.Get(RndMessagesPoolCol, bson.M{"message.block_number": blockNumber, "message.round": round}, bson.M{}, s.GlobalService.GetConfig(SaiStorageToken, "").String())
 	if err != nil {
 		s.GlobalService.Logger.Error("processing - rnd processing - get rnd msg for round and block", zap.Error(err))
 		return nil, err

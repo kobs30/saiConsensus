@@ -38,9 +38,9 @@ func NewDB(duplicateCh chan *bytes.Buffer) utils.Database {
 
 func (s *InternalService) duplicateRequests() {
 	for {
-		time.Sleep(time.Duration(s.CoreCtx.Value(SaiDuplicateStorageRequestsInterval).(int)) * time.Second)
+		time.Sleep(time.Duration(s.GlobalService.GetConfig(SaiDuplicateStorageRequestsInterval, 3).Int()) * time.Second)
 		buf := <-s.DuplicateStorageCh
-		err, _ := utils.Send(s.CoreCtx.Value(SaiDuplicateStorageRequestsURL).(string), buf, "")
+		err, _ := utils.Send(s.GlobalService.GetConfig(SaiDuplicateStorageRequestsURL, "").String(), buf, "")
 		if err != nil {
 			s.GlobalService.Logger.Error("process - duplicate requests - send", zap.Error(err))
 		}

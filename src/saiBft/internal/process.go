@@ -53,7 +53,7 @@ func (s *InternalService) Processing() {
 	// btcKeys3, _ := s.getBTCkeys("btc_keys1.json", SaiBTCaddress)
 	//s.TrustedValidators = append(s.TrustedValidators, s.BTCkeys.Address)
 
-	err := s.setValidators(s.CoreCtx.Value(SaiStorageToken).(string))
+	err := s.setValidators(s.GlobalService.GetConfig(SaiStorageToken, "").String())
 	if err != nil {
 		s.GlobalService.Logger.Fatal("process - check validator state", zap.Error(err))
 	}
@@ -73,7 +73,7 @@ func (s *InternalService) Processing() {
 		case data := <-s.InitialSignalCh:
 			s.Validators = append(s.Validators, data.(string))
 
-			err, _ := s.Storage.Update(ParametersCol, bson.M{}, bson.M{"validators": s.Validators}, s.CoreCtx.Value(SaiStorageToken).(string))
+			err, _ := s.Storage.Update(ParametersCol, bson.M{}, bson.M{"validators": s.Validators}, s.GlobalService.GetConfig(SaiStorageToken, "").String())
 			if err != nil {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - initial block consensus msg - put to storage", zap.Error(err))
 				continue
@@ -86,10 +86,10 @@ func (s *InternalService) Processing() {
 	}
 
 	//TEST transaction &consensus messages
-	//s.saveTestTx(s.CoreCtx.Value(SaiBTCaddress).(string), s.CoreCtx.Value(SaiStorageToken).(string), s.CoreCtx.Value(SaiP2pAddress).(string))
-	//s.saveTestTx2(s.CoreCtx.Value(SaiBTCaddress).(string), s.CoreCtx.Value(SaiStorageToken).(string), s.CoreCtx.Value(SaiP2pAddress).(string))
+	//s.saveTestTx(s.GlobalService.GetConfig(SaiBTCaddress, "").String(), s.GlobalService.GetConfig(SaiStorageToken, "").String(), s.GlobalService.GetConfig(SaiP2pAddress, "").String())
+	//s.saveTestTx2(s.GlobalService.GetConfig(SaiBTCaddress, "").String(), s.GlobalService.GetConfig(SaiStorageToken, "").String(), s.GlobalService.GetConfig(SaiP2pAddress, "").String())
 
-	if s.CoreCtx.Value(SaiDuplicateStorageRequests).(bool) {
+	if s.GlobalService.GetConfig(SaiDuplicateStorageRequests, false).Bool() {
 		go s.duplicateRequests()
 	}
 
@@ -101,19 +101,19 @@ func (s *InternalService) Processing() {
 
 		//clean block candidate collection at round = 0
 
-		err := s.removeCandidates(s.CoreCtx.Value(SaiStorageToken).(string))
+		err := s.removeCandidates(s.GlobalService.GetConfig(SaiStorageToken, "").String())
 		if err != nil {
 			s.GlobalService.Logger.Error("process - clean blockCandidates collection", zap.Error(err))
 			continue
 		}
 
 		// get last block from blockchain collection or create initial block
-		block, err := s.getLastBlockFromBlockChain(s.CoreCtx.Value(SaiStorageToken).(string), s.CoreCtx.Value(SaiBTCaddress).(string))
+		block, err := s.getLastBlockFromBlockChain(s.GlobalService.GetConfig(SaiStorageToken, "").String(), s.GlobalService.GetConfig(SaiBTCaddress, "").String())
 		if err != nil {
 			continue
 		}
 
-		rnd, err := s.rndProcessing(s.CoreCtx.Value(SaiBTCaddress).(string), s.CoreCtx.Value(SaiP2pAddress).(string), s.CoreCtx.Value(SaiStorageToken).(string), block.Block.Number)
+		rnd, err := s.rndProcessing(s.GlobalService.GetConfig(SaiBTCaddress, "").String(), s.GlobalService.GetConfig(SaiP2pAddress, "").String(), s.GlobalService.GetConfig(SaiStorageToken, "").String(), block.Block.Number)
 		if err != nil {
 			s.GlobalService.Logger.Error("process - process rnd", zap.Error(err))
 			continue
@@ -124,7 +124,7 @@ func (s *InternalService) Processing() {
 		s.GlobalService.Logger.Sugar().Debugf("ROUND = %d", round) //DEBUG
 		if round == 0 {
 			// get messages with votes = 0
-			transactions, err := s.getZeroVotedTransactions(s.CoreCtx.Value(SaiStorageToken).(string), block.Block.Number)
+			transactions, err := s.getZeroVotedTransactions(s.GlobalService.GetConfig(SaiStorageToken, "").String(), block.Block.Number)
 			if err != nil {
 				s.GlobalService.Logger.Error("process - round == 0 - get zero-voted tx messages", zap.Error(err))
 			}
@@ -137,7 +137,7 @@ func (s *InternalService) Processing() {
 			// validate/execute each tx msg, update hash and votes
 			if len(transactions) != 0 {
 				for _, tx := range transactions {
-					err = s.validateExecuteTransactionMsg(tx, rnd, block.Block.Number, s.CoreCtx.Value(SaiBTCaddress).(string), s.CoreCtx.Value(SaiVM1Address).(string), s.CoreCtx.Value(SaiStorageToken).(string))
+					err = s.validateExecuteTransactionMsg(tx, rnd, block.Block.Number, s.GlobalService.GetConfig(SaiBTCaddress, "").String(), s.GlobalService.GetConfig(SaiVM1Address, "").String(), s.GlobalService.GetConfig(SaiStorageToken, "").String())
 					if err != nil {
 						continue
 					}
@@ -147,19 +147,19 @@ func (s *InternalService) Processing() {
 
 			consensusMsg.Round = round + 1
 
-			err = consensusMsg.HashAndSign(s.CoreCtx.Value(SaiBTCaddress).(string), s.BTCkeys.Private)
+			err = consensusMsg.HashAndSign(s.GlobalService.GetConfig(SaiBTCaddress, "").String(), s.BTCkeys.Private)
 			if err != nil {
 				s.GlobalService.Logger.Error("process - round == 0 - hash and sign consensus msg", zap.Error(err))
 				goto startLoop
 			}
 
-			err, _ = s.Storage.Put("ConsensusPool", consensusMsg, s.CoreCtx.Value(SaiStorageToken).(string))
+			err, _ = s.Storage.Put("ConsensusPool", consensusMsg, s.GlobalService.GetConfig(SaiStorageToken, "").String())
 			if err != nil {
 				s.GlobalService.Logger.Error("process - round == 0 - put consensus to ConsensusPool collection", zap.Error(err))
 				goto startLoop
 			}
 
-			err = s.broadcastMsg(consensusMsg, s.CoreCtx.Value(SaiBTCaddress).(string), false)
+			err = s.broadcastMsg(consensusMsg, s.GlobalService.GetConfig(SaiBTCaddress, "").String(), false)
 			if err != nil {
 				s.GlobalService.Logger.Error("process - round==0 - broadcast consensus message", zap.Error(err))
 				goto startLoop
@@ -171,7 +171,7 @@ func (s *InternalService) Processing() {
 
 		} else {
 			// get consensus messages for the round
-			msgs, err := s.getConsensusMsgForTheRound(round, block.Block.Number, s.CoreCtx.Value(SaiStorageToken).(string))
+			msgs, err := s.getConsensusMsgForTheRound(round, block.Block.Number, s.GlobalService.GetConfig(SaiStorageToken, "").String())
 			if err != nil {
 				goto startLoop
 			}
@@ -187,7 +187,7 @@ func (s *InternalService) Processing() {
 
 				// update votes for each tx message from consensusMsg
 				for _, txMsgHash := range msg.Messages {
-					err, result := s.Storage.Get("MessagesPool", bson.M{"executed_hash": txMsgHash, "block_hash": ""}, bson.M{}, s.CoreCtx.Value(SaiStorageToken).(string))
+					err, result := s.Storage.Get("MessagesPool", bson.M{"executed_hash": txMsgHash, "block_hash": ""}, bson.M{}, s.GlobalService.GetConfig(SaiStorageToken, "").String())
 					if err != nil {
 						s.GlobalService.Logger.Error("process - get msg from consensus msg from storage", zap.Error(err))
 						continue
@@ -196,7 +196,7 @@ func (s *InternalService) Processing() {
 					if len(result) == 2 {
 						continue
 					}
-					err = s.updateTxMsgVotes(txMsgHash, s.CoreCtx.Value(SaiStorageToken).(string), round)
+					err = s.updateTxMsgVotes(txMsgHash, s.GlobalService.GetConfig(SaiStorageToken, "").String(), round)
 					if err != nil {
 						continue
 					}
@@ -204,7 +204,7 @@ func (s *InternalService) Processing() {
 			}
 
 			// get messages with votes>=(roundNumber*10)%
-			txMsgs, err := s.getTxMsgsWithCertainNumberOfVotes(s.CoreCtx.Value(SaiStorageToken).(string), round)
+			txMsgs, err := s.getTxMsgsWithCertainNumberOfVotes(s.GlobalService.GetConfig(SaiStorageToken, "").String(), round)
 			if err != nil {
 				goto startLoop
 			}
@@ -221,19 +221,19 @@ func (s *InternalService) Processing() {
 				}
 				newConsensusMsg.Round = round + 1
 
-				err = newConsensusMsg.HashAndSign(s.CoreCtx.Value(SaiBTCaddress).(string), s.BTCkeys.Private)
+				err = newConsensusMsg.HashAndSign(s.GlobalService.GetConfig(SaiBTCaddress, "").String(), s.BTCkeys.Private)
 				if err != nil {
 					s.GlobalService.Logger.Error("process - hash and sign consensus msg", zap.Error(err))
 					goto startLoop
 				}
 
-				err, _ = s.Storage.Put("ConsensusPool", newConsensusMsg, s.CoreCtx.Value(SaiStorageToken).(string))
+				err, _ = s.Storage.Put("ConsensusPool", newConsensusMsg, s.GlobalService.GetConfig(SaiStorageToken, "").String())
 				if err != nil {
 					s.GlobalService.Logger.Error("process -  put consensus to ConsensusPool collection", zap.Error(err))
 					goto startLoop
 				}
 
-				err = s.broadcastMsg(newConsensusMsg, s.CoreCtx.Value(SaiP2pAddress).(string), false)
+				err = s.broadcastMsg(newConsensusMsg, s.GlobalService.GetConfig(SaiP2pAddress, "").String(), false)
 				if err != nil {
 					goto startLoop
 				}
@@ -248,12 +248,12 @@ func (s *InternalService) Processing() {
 			} else {
 				s.GlobalService.Logger.Sugar().Debugf("ROUND = %d", round) //DEBUG
 
-				newBlock, err := s.formAndSaveNewBlock(block, s.CoreCtx.Value(SaiBTCaddress).(string), s.CoreCtx.Value(SaiStorageToken).(string), txMsgs, rnd)
+				newBlock, err := s.formAndSaveNewBlock(block, s.GlobalService.GetConfig(SaiBTCaddress, "").String(), s.GlobalService.GetConfig(SaiStorageToken, "").String(), txMsgs, rnd)
 				if err != nil {
 					goto startLoop
 				}
 
-				err = s.broadcastMsg(newBlock.Block, s.CoreCtx.Value(SaiP2pAddress).(string), false)
+				err = s.broadcastMsg(newBlock.Block, s.GlobalService.GetConfig(SaiP2pAddress, "").String(), false)
 				if err != nil {
 					goto startLoop
 				}

@@ -21,11 +21,20 @@ func (is InternalService) Handlers() saiService.Handler {
 	}
 }
 
+type TX struct {
+	Message         string `json:"message"`
+	MessageHash     string `json:"message_hash"`
+	Nonce           int    `json:"nonce"`
+	SenderAddress   string `json:"sender_address"`
+	SenderSignature string `json:"sender_signature"`
+	Type            string `json:"type"`
+}
+
 type VMrequest struct {
-	Block  int             `json:"block"`
-	Rnd    int64           `json:"rnd"`
-	Tx     json.RawMessage `json:"tx"`
-	Script string          `json:"message"`
+	Block  int    `json:"block"`
+	Rnd    int64  `json:"rnd"`
+	Tx     TX     `json:"tx"`
+	Script string `json:"message"`
 }
 
 type VMscript struct {
@@ -49,6 +58,7 @@ func (is InternalService) execute(data interface{}) interface{} {
 		fmt.Println("REQUEST CONV::ERROR", err)
 	}
 	fmt.Println("REQUEST IS:::::::", request)
+	fmt.Println("TX_STR:::::", request.Tx)
 	script := request.Script
 	var vmScript VMscript
 	err = json.Unmarshal([]byte(script), &vmScript)
@@ -56,7 +66,7 @@ func (is InternalService) execute(data interface{}) interface{} {
 		fmt.Println("datERROR", err)
 		fmt.Println("REQUEST CONV::ERROR", err)
 	}
-	theSender := "sender" // request.Tx.Sender
+	theSender := request.Tx.SenderAddress // request.Tx.Sender
 	fmt.Println("XXXXX", vmScript.Script)
 	if vmScript.Script == "fly me to the moon" && request.Block == 1 {
 		fmt.Println("L51")

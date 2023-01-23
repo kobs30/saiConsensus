@@ -82,8 +82,7 @@ func (db Database) makeRequest(method string, request StorageRequest) (error, []
 		fmt.Println("Database request error: ", jsonErr)
 		return jsonErr, []byte("")
 	}
-	db.url = "http://185.229.119.188:8801"
-	db.token = "12345"
+
 	return Send(db.url+"/"+method, bytes.NewBuffer(jsonStr), db.token)
 }
 

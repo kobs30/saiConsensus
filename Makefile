@@ -12,7 +12,7 @@ build:
 
 service:
 #	cd ./src/saiStorage && go mod tidy && go build -o ../../microservices/saiStorage/build/sai-storage
-#	cd ./src/saiBft && go mod tidy && go build -o ../../microservices/saiBft/build/sai-bft
+	cd ./src/saiBft && go mod tidy && go build -o ../../microservices/saiBft/build/sai-bft
 	cd ./src/saiVM1 && go mod tidy && go build -o ../../microservices/saiVM1/build/sai-vm1
 #	cd ./src/saiBTC && go mod tidy && go build -o ../../microservices/saiBtc/build/sai-btc
 #	cd ./src/saiP2pProxy && go mod tidy && go build -o ../../microservices/saiP2pProxy/build/sai-p2p

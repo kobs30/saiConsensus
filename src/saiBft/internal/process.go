@@ -543,6 +543,8 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 		return nil, err
 	}
 
+	newBlock.BlockHash = newBlock.Block.BlockHash
+
 	for _, tx := range txMsgs {
 		err, _ := s.Storage.Update(MessagesPoolCol, bson.M{"executed_hash": tx.ExecutedHash}, bson.M{"block_hash": newBlock.BlockHash, "block_number": newBlock.Block.Number}, storageToken)
 		if err != nil {

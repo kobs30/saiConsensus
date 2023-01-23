@@ -57,7 +57,6 @@ func (s *InternalService) Processing() {
 	if err != nil {
 		s.GlobalService.Logger.Fatal("process - check validator state", zap.Error(err))
 	}
-
 	s.GlobalService.Logger.Debug("get validators", zap.Strings("validators", s.Validators)) //DEBUG
 
 	for _, validator := range s.Validators {
@@ -589,13 +588,23 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 
 	// if there is no such blockCandidate, save block to BlockCandidate collection
 	if blockCandidate == nil {
-		s.GlobalService.Logger.Debug("process - formSaveNewBlock  - blockCandidate not found - put to candidates", zap.Int("block_number", newBlock.Block.Number), zap.String("hash", newBlock.BlockHash), zap.Strings("signatures", newBlock.Signatures)) // DEBUG
-		err, _ := s.Storage.Put(BlockCandidatesCol, newBlock, storageToken)
-		if err != nil {
-			s.GlobalService.Logger.Error("process - round == 7 - form and save new block - put to BlockCandidate collection", zap.Error(err))
-			return nil, err
+		if float64(newBlock.Votes) >= requiredVotes {
+			err, _ := s.Storage.Put(blockchainCol, newBlock, storageToken)
+			if err != nil {
+				s.GlobalService.Logger.Error("process - formAndSaveNewBlock - blockCandidate was not found - add block to blockchain", zap.Error(err))
+				return nil, err
+			}
+			s.GlobalService.Logger.Debug("process - formAndSaveNewBlock - found blockCandidate put to blockchain", zap.Int("block_number", blockCandidate.Block.Number), zap.Int("votes", blockCandidate.Votes), zap.String("hash", blockCandidate.BlockHash))
+		} else {
+			s.GlobalService.Logger.Debug("process - formSaveNewBlock  - blockCandidate not found - put to candidates", zap.Int("block_number", newBlock.Block.Number), zap.String("hash", newBlock.BlockHash), zap.Strings("signatures", newBlock.Signatures)) // DEBUG
+			err, _ := s.Storage.Put(BlockCandidatesCol, newBlock, storageToken)
+			if err != nil {
+				s.GlobalService.Logger.Error("process - round == 7 - form and save new block - put to BlockCandidate collection", zap.Error(err))
+				return nil, err
+			}
+			s.GlobalService.Logger.Debug("process - formAndSaveNewBlock - put to candidates", zap.Int("block_number", newBlock.Block.Number), zap.Int("votes", newBlock.Votes), zap.String("hash", newBlock.BlockHash), zap.Strings("signatures", newBlock.Signatures))
 		}
-		s.GlobalService.Logger.Debug("process - formAndSaveNewBlock - put to candidates", zap.Int("block_number", newBlock.Block.Number), zap.Int("votes", newBlock.Votes), zap.String("hash", newBlock.BlockHash), zap.Strings("signatures", newBlock.Signatures))
+
 	} else { // else, add vote and signature and save to blockchain
 		s.GlobalService.Logger.Debug("process - formAndSaveNewBlock - found candidates with hash", zap.Int("block_number", blockCandidate.Block.Number), zap.Int("votes", blockCandidate.Votes), zap.String("hash", blockCandidate.BlockHash), zap.Strings("signatures", blockCandidate.Signatures))
 		blockCandidate.Votes = newBlock.Votes + blockCandidate.Votes

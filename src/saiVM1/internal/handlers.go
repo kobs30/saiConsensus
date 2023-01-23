@@ -22,10 +22,10 @@ func (is InternalService) Handlers() saiService.Handler {
 }
 
 type VMrequest struct {
-	Block  int         `json:"block"`
-	Rnd    int64       `json:"rnd"`
-	Tx     interface{} `json:"tx"`
-	Script string      `json:"message"`
+	Block  int             `json:"block"`
+	Rnd    int64           `json:"rnd"`
+	Tx     json.RawMessage `json:"tx"`
+	Script string          `json:"message"`
 }
 
 func (is InternalService) execute(data interface{}) interface{} {
@@ -39,14 +39,15 @@ func (is InternalService) execute(data interface{}) interface{} {
 		fmt.Println("datERROR", err)
 	}
 	script := request.Script
+	theSender := "sender" // request.Tx.Sender
 	fmt.Println("XXXXX", request)
 	if script == "fly me to the moon" && request.Block == 0 {
 		thevalidator := make(map[string]bool)
-		thevalidator["sender"] = true
+		thevalidator[theSender] = true
 		Validators = append(Validators, thevalidator)
 
 		initbalance := make(map[string]int64)
-		initbalance["sender"] = int64(1000)
+		initbalance[theSender] = int64(1000)
 		Distribution = append(Distribution, initbalance)
 		initbalance = make(map[string]int64)
 		initbalance["139uwuYCM1knfLdyVX2yjzwhDDz73Zx7Sj"] = int64(1000)
@@ -84,6 +85,12 @@ func (is InternalService) execute(data interface{}) interface{} {
 		_, blockhainData := is.Storage.Get("MessagesPool", theQuery, theOptions)
 		fmt.Println("blockhainData", string(blockhainData))
 		res, _ := vm.ToValue(string(blockhainData))
+		return res
+	})
+
+	vm.Set("getValidators", func(call otto.FunctionCall) otto.Value {
+		// {"collection":"MessagesPool","options":{},"select":{"vm_response.V": {"$ne" : null}  }}
+		res, _ := vm.ToValue("Validators")
 		return res
 	})
 

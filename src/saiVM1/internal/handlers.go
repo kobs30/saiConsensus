@@ -28,24 +28,43 @@ type VMrequest struct {
 	Script string          `json:"message"`
 }
 
+type VMscript struct {
+	Script string `json:"data"`
+	Method string `json:"method"`
+}
+
 func (is InternalService) execute(data interface{}) interface{} {
 	counter++
 	var Validators []map[string]bool
 	var Distribution []map[string]int64
 	var CustomFld []map[string]string
 	var request VMrequest
-	err := json.Unmarshal([]byte(data.(string)), &request)
+	fmt.Println("REQUEST:::::::", data)
+
+	dataJSON, _ := json.Marshal(data)
+	fmt.Println("REQUEST JSON CONV:::::::", dataJSON)
+	err := json.Unmarshal(dataJSON, &request)
 	if err != nil {
 		fmt.Println("datERROR", err)
+		fmt.Println("REQUEST CONV::ERROR", err)
 	}
+	fmt.Println("REQUEST IS:::::::", request)
 	script := request.Script
+	var vmScript VMscript
+	err = json.Unmarshal([]byte(script), &vmScript)
+	if err != nil {
+		fmt.Println("datERROR", err)
+		fmt.Println("REQUEST CONV::ERROR", err)
+	}
 	theSender := "sender" // request.Tx.Sender
-	fmt.Println("XXXXX", request)
-	if script == "fly me to the moon" && request.Block == 0 {
+	fmt.Println("XXXXX", vmScript.Script)
+	if vmScript.Script == "fly me to the moon" && request.Block == 1 {
+		fmt.Println("L51")
 		thevalidator := make(map[string]bool)
 		thevalidator[theSender] = true
 		Validators = append(Validators, thevalidator)
 
+		fmt.Println("L56")
 		initbalance := make(map[string]int64)
 		initbalance[theSender] = int64(1000)
 		Distribution = append(Distribution, initbalance)
@@ -56,6 +75,7 @@ func (is InternalService) execute(data interface{}) interface{} {
 		initbalance["1PKVs1mizz4abZ8zvk4gbUNdSvmMXTFfEh"] = int64(1000)
 		Distribution = append(Distribution, initbalance)
 
+		fmt.Println("L67")
 		initsettings := make(map[string]string)
 		initsettings["FeePerMessageSymbol"] = "0.01"
 		CustomFld = append(CustomFld, initsettings)
@@ -66,6 +86,8 @@ func (is InternalService) execute(data interface{}) interface{} {
 		initsettings["FeeSaveDataPerSymbol"] = "0.01"
 		CustomFld = append(CustomFld, initsettings)
 
+		fmt.Println("L78")
+		fmt.Println("RETURN::::::::::::", bson.M{"GENESYS": "GENESYS", "vm_processed": true, "vm_result": true, "vm_response": bson.M{"callNumber": counter, "D": Distribution, "V": Validators, "C": CustomFld}})
 		return bson.M{"GENESYS": "GENESYS", "vm_processed": true, "vm_result": true, "vm_response": bson.M{"callNumber": counter, "D": Distribution, "V": Validators, "C": CustomFld}}
 	}
 
@@ -165,7 +187,7 @@ func (is InternalService) execute(data interface{}) interface{} {
 	})
 
 	//vm.SetTimeout(time.Second)
-	result, err := vm.Run(script)
+	result, err := vm.Run(vmScript.Script)
 	if err != nil {
 		fmt.Println("error", err)
 		return bson.M{"vm_processed": true, "vm_result": false}
@@ -175,6 +197,7 @@ func (is InternalService) execute(data interface{}) interface{} {
 	CustomFldElement := make(map[string]string)
 	CustomFldElement["theScriptOrTxHash"], _ = result.ToString()
 	CustomFld = append(CustomFld, CustomFldElement)
+	fmt.Println("RETURN ::::: ", bson.M{"vm_processed": true, "vm_result": true, "vm_response": bson.M{"callNumber": counter, "D": Distribution, "V": Validators, "C": CustomFld}})
 	return bson.M{"vm_processed": true, "vm_result": true, "vm_response": bson.M{"callNumber": counter, "D": Distribution, "V": Validators, "C": CustomFld}}
 }
 

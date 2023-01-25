@@ -116,6 +116,7 @@ nextRound:
 	resultMap, err := s.GetResultRoundMap(blockNumber, rndRound)
 	if err != nil {
 		s.GlobalService.Logger.Error("process - rnd processing -  get result map", zap.Error(err))
+		rndRound++
 		goto nextRound
 	}
 

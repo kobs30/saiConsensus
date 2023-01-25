@@ -561,6 +561,8 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 		return nil, err
 	}
 
+	newBlock.BlockHash = newBlock.Block.BlockHash
+
 	newBlock.Votes = +1
 	newBlock.Signatures = append(newBlock.Signatures, newBlock.Block.SenderSignature)
 

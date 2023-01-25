@@ -538,9 +538,9 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 		},
 	}
 
-	if newBlock.Block.Number == 1 {
-		newBlock.Block.PreviousBlockHash = ""
-	}
+	// if newBlock.Block.Number == 1 {
+	// 	newBlock.Block.PreviousBlockHash = ""
+	// }
 
 	err := newBlock.Block.HashAndSign(SaiBTCaddress, s.BTCkeys.Private)
 	if err != nil {

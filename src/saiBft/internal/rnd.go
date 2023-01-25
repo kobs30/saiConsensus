@@ -116,7 +116,6 @@ nextRound:
 	resultMap, err := s.GetResultRoundMap(blockNumber, rndRound)
 	if err != nil {
 		s.GlobalService.Logger.Error("process - rnd processing -  get result map", zap.Error(err))
-		rndRound++
 		goto nextRound
 	}
 
@@ -161,7 +160,7 @@ func (s *InternalService) GetResultRoundMap(blockNumber, round int) (map[int64]i
 		return nil, err
 	}
 	if len(rndResult) == 2 {
-		return nil, errNoRndMsgsFound
+		return nil, nil
 	}
 
 	RNDMsgs := make([]*models.RND, 0)

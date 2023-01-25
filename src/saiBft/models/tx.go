@@ -72,7 +72,7 @@ func (m *TransactionMessage) GetExecutedHash() error {
 	return nil
 }
 
-func CreateTxMsg(keys *BtcKeys, address string, argStr string) (*TransactionMessage, error) {
+func CreateTxMsg(keys *BtcKeys, address string, argStr []string) (*TransactionMessage, error) {
 	transactionMessage := &TransactionMessage{
 		Tx: &Tx{
 			Type:          TransactionMsgType,

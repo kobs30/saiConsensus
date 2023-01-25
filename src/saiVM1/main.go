@@ -7,15 +7,13 @@ import (
 
 func main() {
 	svc := saiService.NewService("sai_VM1")
-	is := internal.Service(svc.Context)
-
 	svc.RegisterConfig("config.yml")
+
+	is := internal.Service(svc.Context)
 
 	svc.RegisterHandlers(
 		is.Handlers(),
 	)
-
-	svc.RegisterInitTask(is.Init)
 
 	svc.Start()
 }

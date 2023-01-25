@@ -162,7 +162,7 @@ func (is InternalService) execute(data interface{}) interface{} {
 
 	vm.Set("getBalance", func(call otto.FunctionCall) otto.Value {
 		Wallet, _ := call.Argument(0).ToString()
-		WalletBalance, err := getBalance(Wallet, is)
+		WalletBalance, err := is.getBalance(Wallet)
 		if err != nil {
 			res, _ := vm.ToValue(false)
 			return res
@@ -206,7 +206,7 @@ func (is InternalService) execute(data interface{}) interface{} {
 	vm.Set("transfer", func(call otto.FunctionCall) otto.Value {
 		to, _ := call.Argument(0).ToString()
 		amount, _ := call.Argument(1).ToInteger()
-		WalletBalance, _ := getBalance(request.Tx.SenderAddress, is)
+		WalletBalance, _ := is.getBalance(request.Tx.SenderAddress)
 		if (WalletBalance - amount) > 0 {
 			balance := make(map[string]int64)
 			balance[request.Tx.SenderAddress] = int64(0 - amount)
@@ -225,7 +225,7 @@ func (is InternalService) execute(data interface{}) interface{} {
 		}
 		to, _ := call.Argument(0).ToString()
 		amount, _ := call.Argument(1).ToInteger()
-		contractBalance, _ := getBalance(currentContract, is)
+		contractBalance, _ := is.getBalance(currentContract)
 		if (contractBalance - amount) > 0 {
 			balance := make(map[string]int64)
 			balance[request.Tx.SenderAddress] = int64(0 - amount)
@@ -257,7 +257,7 @@ func (is InternalService) execute(data interface{}) interface{} {
 	return bson.M{"vm_processed": true, "vm_result": true, "vm_response": bson.M{"callNumber": counter, "D": Distribution, "V": Validators, "C": CustomFld, "F": Fee}}
 }
 
-func getBalance(Wallet string, is InternalService) (int64, error) {
+func (is InternalService) getBalance(Wallet string) (int64, error) {
 	_, blockhainData := is.Storage.Get("MessagesPool", bson.M{"vm_response.D": bson.M{"$elemMatch": bson.M{Wallet: bson.M{"$exists": 1}}}}, bson.M{})
 	fmt.Println("blockhainData", string(blockhainData))
 	var jsonBlockchainData JSONRESP
@@ -278,7 +278,11 @@ func getBalance(Wallet string, is InternalService) (int64, error) {
 	*/
 
 	fmt.Println("dat", jsonBlockchainData)
-	fmt.Println("datVMResponse PUPUPUP", jsonBlockchainData.Result[0].VMResponse.D[0][Wallet])
+
+	if len(jsonBlockchainData.Result) > 0 {
+		fmt.Println("datVMResponse PUPUPUP", jsonBlockchainData.Result[0].VMResponse.D[0][Wallet])
+	}
+
 	// {"vm_response.D":{$elemMatch: {"1FTGGrgfHTsgHsw0f8Hff8": {$exists:true} } } }
 	var WalletBalance int64
 	for _, el := range jsonBlockchainData.Result {

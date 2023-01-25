@@ -177,7 +177,7 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 			Service.GlobalService.Logger.Debug("handlers - handleMessage", zap.String("type", msg.Type), zap.Any("msg", msg)) // DEBUG
 			err := msg.Validate()
 			if err != nil {
-				Service.GlobalService.Logger.Error("listenFromSaiP2P - consensusMsg - validate", zap.Error(err))
+				Service.GlobalService.Logger.Error("listenFromSaiP2P - block - validate", zap.Error(err))
 				continue
 			}
 			err = models.ValidateSignature(msg, saiBtcAddress, msg.SenderAddress, msg.SenderSignature)

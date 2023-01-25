@@ -538,14 +538,8 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 		},
 	}
 
-	// if newBlock.Block.Number == 1 {
-	// 	newBlock.Block.PreviousBlockHash = ""
-	// }
-
-	err := newBlock.Block.HashAndSign(SaiBTCaddress, s.BTCkeys.Private)
-	if err != nil {
-		s.GlobalService.Logger.Error("process - round == 7 - form and save new block - hash and sign block", zap.Error(err))
-		return nil, err
+	if newBlock.Block.Number == 1 {
+		newBlock.Block.PreviousBlockHash = ""
 	}
 
 	newBlock.BlockHash = newBlock.Block.BlockHash
@@ -559,6 +553,12 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 		tx.BlockHash = newBlock.BlockHash
 		tx.BlockNumber = newBlock.Block.Number
 		newBlock.Block.Messages = append(newBlock.Block.Messages, tx)
+	}
+
+	err := newBlock.Block.HashAndSign(SaiBTCaddress, s.BTCkeys.Private)
+	if err != nil {
+		s.GlobalService.Logger.Error("process - round == 7 - form and save new block - hash and sign block", zap.Error(err))
+		return nil, err
 	}
 
 	newBlock.Votes = +1

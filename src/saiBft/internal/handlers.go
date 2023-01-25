@@ -84,7 +84,7 @@ var HandleTxFromCli = saiService.HandlerElement{
 			return nil, fmt.Errorf("wrong type for args in cli tx method, current type :%s", reflect.TypeOf(data))
 		}
 
-		transactionMessage, err := models.CreateTxMsg(Service.BTCkeys, Service.GlobalService.GetConfig(SaiBTCaddress, "").String(), argsStr[])
+		transactionMessage, err := models.CreateTxMsg(Service.BTCkeys, Service.GlobalService.GetConfig(SaiBTCaddress, "").String(), argsStr)
 
 		if err != nil {
 			Service.GlobalService.Logger.Error("handlers - get-tx - create tx", zap.Error(err))
@@ -247,7 +247,28 @@ var GetTx = saiService.HandlerElement{
 	Name:        "get-tx",
 	Description: "return tx message",
 	Function: func(data interface{}) (interface{}, error) {
-		tx, err := models.CreateTxMsg(Service.BTCkeys, Service.GlobalService.GetConfig(SaiBTCaddress, "").String(), data.(string))
+		argsStr := make([]string, 0)
+		txStruct := models.TxFromHandler{
+			IsFromCli: false,
+		}
+		switch args := data.(type) {
+		case []string:
+			argsStr = args
+			Service.GlobalService.Logger.Debug("got message from cli", zap.Strings("data", argsStr))
+			txStruct.IsFromCli = true
+		case []interface{}:
+			for _, iface := range args {
+				strArg, ok := iface.(string)
+				if !ok {
+					return nil, fmt.Errorf("wrong argument type in tx data, argument : [%s],type  :[%s]", iface, reflect.TypeOf(data))
+				}
+				argsStr = append(argsStr, strArg)
+			}
+			Service.GlobalService.Logger.Debug("got message from http", zap.Strings("data", argsStr))
+		default:
+			return nil, fmt.Errorf("wrong type for args in cli tx method, current type :%s", reflect.TypeOf(data))
+		}
+		tx, err := models.CreateTxMsg(Service.BTCkeys, Service.GlobalService.GetConfig(SaiBTCaddress, "").String(), argsStr)
 		if err != nil {
 			Service.GlobalService.Logger.Error("handlers - get-tx - create tx", zap.Error(err))
 			return nil, err

@@ -86,7 +86,7 @@ func (s *InternalService) Processing() {
 	}
 
 	//TEST transaction &consensus messages
-	s.saveTestTx(s.GlobalService.GetConfig(SaiBTCaddress, "").String(), s.GlobalService.GetConfig(SaiStorageToken, "").String(), s.GlobalService.GetConfig(SaiP2pAddress, "").String())
+	//s.saveTestTx(s.GlobalService.GetConfig(SaiBTCaddress, "").String(), s.GlobalService.GetConfig(SaiStorageToken, "").String(), s.GlobalService.GetConfig(SaiP2pAddress, "").String())
 	//s.saveTestTx2(s.GlobalService.GetConfig(SaiBTCaddress, "").String(), s.GlobalService.GetConfig(SaiStorageToken, "").String(), s.GlobalService.GetConfig(SaiP2pAddress, "").String())
 
 	if s.GlobalService.GetConfig(SaiDuplicateStorageRequests, false).Bool() {

@@ -21,7 +21,7 @@ type BlockConsensusMessage struct {
 type Block struct {
 	Type              string                `json:"type" valid:",required"`
 	Number            int                   `json:"number" valid:",required"`
-	PreviousBlockHash string                `json:"prev_block_hash" valid:",required"`
+	PreviousBlockHash string                `json:"prev_block_hash"`
 	SenderAddress     string                `json:"sender_address" valid:",required"`
 	SenderSignature   string                `json:"sender_signature,omitempty" valid:",required"`
 	BlockHash         string                `json:"block_hash"`

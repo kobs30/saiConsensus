@@ -85,7 +85,7 @@ func (s *InternalService) Processing() {
 	}
 
 	//TEST transaction &consensus messages
-	//s.saveTestTx(s.GlobalService.GetConfig(SaiBTCaddress, "").String(), s.GlobalService.GetConfig(SaiStorageToken, "").String(), s.GlobalService.GetConfig(SaiP2pAddress, "").String())
+	s.saveTestTx(s.GlobalService.GetConfig(SaiBTCaddress, "").String(), s.GlobalService.GetConfig(SaiStorageToken, "").String(), s.GlobalService.GetConfig(SaiP2pAddress, "").String())
 	//s.saveTestTx2(s.GlobalService.GetConfig(SaiBTCaddress, "").String(), s.GlobalService.GetConfig(SaiStorageToken, "").String(), s.GlobalService.GetConfig(SaiP2pAddress, "").String())
 
 	if s.GlobalService.GetConfig(SaiDuplicateStorageRequests, false).Bool() {
@@ -537,6 +537,10 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 		},
 	}
 
+	if newBlock.Block.Number == 1 {
+		newBlock.Block.PreviousBlockHash = ""
+	}
+
 	err := newBlock.Block.HashAndSign(SaiBTCaddress, s.BTCkeys.Private)
 	if err != nil {
 		s.GlobalService.Logger.Error("process - round == 7 - form and save new block - hash and sign block", zap.Error(err))
@@ -596,7 +600,7 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 				s.GlobalService.Logger.Error("process - formAndSaveNewBlock - blockCandidate was not found - add block to blockchain", zap.Error(err))
 				return nil, err
 			}
-			s.GlobalService.Logger.Debug("process - formAndSaveNewBlock - found blockCandidate put to blockchain", zap.Int("block_number", blockCandidate.Block.Number), zap.Int("votes", blockCandidate.Votes), zap.String("hash", blockCandidate.BlockHash))
+			s.GlobalService.Logger.Debug("process - formAndSaveNewBlock - found blockCandidate put to blockchain", zap.Int("block_number", newBlock.Block.Number), zap.Int("votes", newBlock.Votes), zap.String("hash", newBlock.BlockHash))
 		} else {
 			s.GlobalService.Logger.Debug("process - formSaveNewBlock  - blockCandidate not found - put to candidates", zap.Int("block_number", newBlock.Block.Number), zap.String("hash", newBlock.BlockHash), zap.Strings("signatures", newBlock.Signatures)) // DEBUG
 			err, _ := s.Storage.Put(BlockCandidatesCol, newBlock, storageToken)

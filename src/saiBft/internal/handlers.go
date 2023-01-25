@@ -84,7 +84,7 @@ var HandleTxFromCli = saiService.HandlerElement{
 			return nil, fmt.Errorf("wrong type for args in cli tx method, current type :%s", reflect.TypeOf(data))
 		}
 
-		transactionMessage, err := models.CreateTxMsg(Service.BTCkeys, Service.GlobalService.GetConfig(SaiBTCaddress, "").String(), data.(string))
+		transactionMessage, err := models.CreateTxMsg(Service.BTCkeys, Service.GlobalService.GetConfig(SaiBTCaddress, "").String(), argsStr[])
 
 		if err != nil {
 			Service.GlobalService.Logger.Error("handlers - get-tx - create tx", zap.Error(err))

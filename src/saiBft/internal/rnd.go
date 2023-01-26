@@ -113,7 +113,7 @@ nextRound:
 
 	time.Sleep(time.Duration(s.GlobalService.GetConfig(SaiSleep, 4).Int()) * time.Second)
 
-	resultMap, err := s.GetResultRoundMap(blockNumber, rndRound)
+	resultMap, err := s.GetResultRoundMap(blockNumber, rndRound+1)
 	if err != nil {
 		s.GlobalService.Logger.Error("process - rnd processing -  get result map", zap.Error(err))
 		goto nextRound

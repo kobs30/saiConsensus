@@ -121,11 +121,10 @@ nextRound:
 
 	s.GlobalService.Logger.Debug("process - rnd - got result map", zap.Any("map", resultMap), zap.Float64("required votes", requiredVotes), zap.Int("round", rndRound))
 
-	if resultMap != nil {
-		resultMap[rnd]++
-	}
-
 	for k, v := range resultMap {
+		if k == rnd {
+			v++
+		}
 		if math.Ceil(float64(v)) >= requiredVotes {
 			rnd = k
 			baseRnd = k

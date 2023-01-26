@@ -96,7 +96,7 @@ nextRound:
 		return 0, err
 	}
 
-	s.GlobalService.Logger.Debug("process - rnd - put msg to storage", zap.Int("block_number", blockNumber), zap.Int("round", rndRound), zap.Any("rndMsg", rndMsg))
+	//	s.GlobalService.Logger.Debug("process - rnd - put msg to storage", zap.Int("block_number", blockNumber), zap.Int("round", rndRound), zap.Any("rndMsg", rndMsg))
 	// err, _ = s.Storage.Put(RndMessagesPoolCol, rndMsg, storageToken)
 	// if err != nil {
 	// 	s.GlobalService.Logger.Error("process - rnd processing - put to db", zap.Error(err))
@@ -119,7 +119,7 @@ nextRound:
 		goto nextRound
 	}
 
-	s.GlobalService.Logger.Debug("process - rnd - got result map", zap.Any("map", resultMap), zap.Float64("required votes", requiredVotes))
+	s.GlobalService.Logger.Debug("process - rnd - got result map", zap.Any("map", resultMap), zap.Float64("required votes", requiredVotes), zap.Int("round", rndRound))
 
 	for k, v := range resultMap {
 		if math.Ceil(float64(v)) >= requiredVotes {
@@ -132,6 +132,7 @@ nextRound:
 	if baseRnd == 0 {
 		for k := range resultMap {
 			rnd += k
+			s.GlobalService.Logger.Debug("process - rnd - new rnd after sum", zap.Float64("required votes", requiredVotes), zap.Int("round", rndRound), zap.Int("new rnd", int(rnd)))
 		}
 	}
 

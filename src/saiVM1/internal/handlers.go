@@ -2,10 +2,11 @@ package internal
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/robertkrimen/otto"
+	"math/rand"
 	"strings"
-
 	// https://go.libhunt.com/otto-alternatives    other languages alternatives
 	"github.com/saiset-co/saiService"
 	"go.mongodb.org/mongo-driver/bson"
@@ -44,6 +45,13 @@ type VMscript struct {
 	Method string `json:"method"`
 }
 
+type RegType struct {
+	Type        string `json:"type"`
+	Symbol      string `json:"symbol"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
 func (is InternalService) execute(data interface{}) interface{} {
 	counter++
 	var Validators []map[string]bool
@@ -52,6 +60,10 @@ func (is InternalService) execute(data interface{}) interface{} {
 	var Fee float64
 	var request VMrequest
 	fmt.Println("REQUEST:::::::", data)
+	var CustomTokens []map[string][]map[string]int64 //[ { toeknGroove: [{address:value},{address2:value2]...] },... ]
+	var Register []map[string]RegType                // [ {contractaddress:{type:token,symbol:GRV,name:Groove,descr:"yet anotehr token"} }, {'amm_'tokencontractaddress:{type:amm,symbol:ammGRV,name:ammGroove, decr:"can contains some amm rules ot whatever"} ,...]
+	fmt.Println("CustomTokens", CustomTokens)
+	fmt.Println("Register", Register)
 
 	dataJSON, _ := json.Marshal(data)
 	fmt.Println("REQUEST JSON CONV:::::::", dataJSON)
@@ -103,12 +115,10 @@ func (is InternalService) execute(data interface{}) interface{} {
 	theScriptHash := request.Tx.MessageHash
 	fmt.Println("XXXXX", vmScript.Script)
 	if vmScript.Script == "fly me to the moon" && request.Block == 1 {
-		fmt.Println("L51")
 		thevalidator := make(map[string]bool)
 		thevalidator[theSender] = true
 		Validators = append(Validators, thevalidator)
 
-		fmt.Println("L56")
 		initbalance := make(map[string]int64)
 		initbalance[theSender] = int64(1000)
 		Distribution = append(Distribution, initbalance)
@@ -119,7 +129,6 @@ func (is InternalService) execute(data interface{}) interface{} {
 		initbalance["1PKVs1mizz4abZ8zvk4gbUNdSvmMXTFfEh"] = int64(1000)
 		Distribution = append(Distribution, initbalance)
 
-		fmt.Println("L67")
 		initsettings := make(map[string]string)
 		initsettings["FeePerMessageSymbol"] = "0.01"
 		CustomFld = append(CustomFld, initsettings)
@@ -130,7 +139,6 @@ func (is InternalService) execute(data interface{}) interface{} {
 		initsettings["FeeSaveDataPerSymbol"] = "0.01"
 		CustomFld = append(CustomFld, initsettings)
 
-		fmt.Println("L78")
 		fmt.Println("RETURN::::::::::::", bson.M{"GENESYS": "GENESYS", "vm_processed": true, "vm_result": true, "vm_response": bson.M{"callNumber": counter, "D": Distribution, "V": Validators, "C": CustomFld}})
 		return bson.M{"GENESYS": "GENESYS", "vm_processed": true, "vm_result": true, "vm_response": bson.M{"callNumber": counter, "D": Distribution, "V": Validators, "C": CustomFld}}
 	}
@@ -138,6 +146,15 @@ func (is InternalService) execute(data interface{}) interface{} {
 	vm := otto.New()
 	vm.Set("getRnd", func(call otto.FunctionCall) otto.Value {
 		res, _ := vm.ToValue(request.Rnd)
+		return res
+	})
+
+	vm.Set("getRndSet", func(call otto.FunctionCall) otto.Value {
+		numbersInSet, _ := call.Argument(0).ToInteger()
+		distributionType, _ := call.Argument(1).ToString()
+		addtionalParams, _ := call.Argument(2).ToFloat()
+		set := generateRandomNumbers(distributionType, int(numbersInSet), addtionalParams, request.Rnd)
+		res, _ := vm.ToValue(set)
 		return res
 	})
 
@@ -219,7 +236,26 @@ func (is InternalService) execute(data interface{}) interface{} {
 			return otto.FalseValue()
 		}
 	})
-	vm.Set("transferFromContract", func(call otto.FunctionCall) otto.Value {
+	vm.Set("transferToTheContract", func(call otto.FunctionCall) otto.Value {
+		if currentContract == "" {
+			return otto.FalseValue()
+		}
+		to := currentContract
+		amount, _ := call.Argument(1).ToInteger()
+		WalletBalance, _ := is.getBalance(request.Tx.SenderAddress)
+		if (WalletBalance - amount) > 0 {
+			balance := make(map[string]int64)
+			balance[request.Tx.SenderAddress] = int64(0 - amount)
+			Distribution = append(Distribution, balance)
+			balance = make(map[string]int64)
+			balance[to] = int64(amount)
+			Distribution = append(Distribution, balance)
+			return otto.TrueValue()
+		} else {
+			return otto.FalseValue()
+		}
+	})
+	vm.Set("transferFromTheContract", func(call otto.FunctionCall) otto.Value {
 		if currentContract == "" {
 			return otto.FalseValue()
 		}
@@ -228,7 +264,7 @@ func (is InternalService) execute(data interface{}) interface{} {
 		contractBalance, _ := is.getBalance(currentContract)
 		if (contractBalance - amount) > 0 {
 			balance := make(map[string]int64)
-			balance[request.Tx.SenderAddress] = int64(0 - amount)
+			balance[currentContract] = int64(0 - amount)
 			Distribution = append(Distribution, balance)
 			balance = make(map[string]int64)
 			balance[to] = int64(amount)
@@ -331,6 +367,34 @@ func addBalance(thebalance, balance int64) otto.Value {
 	}
 }
 
+func isRegistered(item string) bool {
+	return true
+}
+
+func ammAddTokenBalance(token string, amount int64, CustomTokens *[]map[string][]map[string]int64) (int64, error) {
+	if !isRegistered("amm_" + token) {
+		return 0, nil
+	}
+	res, err := addTokenBalance(token, "amm_"+token, amount, CustomTokens)
+	if err != nil {
+		return 0, err
+	}
+	return res, nil
+}
+
+func addTokenBalance(token, address string, amount int64, CustomTokens *[]map[string][]map[string]int64) (int64, error) {
+	if !isRegistered(token) {
+		return 0, errors.New("not registered")
+	}
+	data := map[string][]map[string]int64{
+		token: []map[string]int64{
+			{address: amount},
+		},
+	}
+	*CustomTokens = append(*CustomTokens, data)
+	return amount, nil
+}
+
 type Result struct {
 	ID           string `json:"_id"`
 	BlockHash    string `json:"block_hash"`
@@ -358,4 +422,39 @@ type Result struct {
 
 type JSONRESP struct {
 	Result []Result `json:"result"`
+}
+
+func generateRandomNumbers(distType string, numbersInSet int, param float64, baseRand int64) []float64 {
+
+	//distType := "pareto"
+	//param := 1.5
+	//generateRandomNumbers(distType, param)
+	//rand.Seed(time.Now().UnixNano())
+
+	var set []float64
+	rand.Seed(baseRand)
+	for i := 0; i < numbersInSet; i++ {
+		var num float64
+		switch distType {
+		case "uniform":
+			num = rand.Float64()
+		case "exponential":
+			num = rand.ExpFloat64()
+		case "normal":
+			num = rand.NormFloat64()
+		//https://go-recipes.dev/generating-random-numbers-with-go-616d30ccc926
+		//case "poisson":
+		//	num = float64(stats.Poisson(param))
+		//case "lognormal":
+		//	num = rand.LogNormal(param, param)
+		//case "pareto":
+		//	num = rand.Pareto(param)
+		//case "beta":
+		//	num = rand.Beta(param, param)
+		default:
+			return nil
+		}
+		set = append(set, num)
+	}
+	return set
 }

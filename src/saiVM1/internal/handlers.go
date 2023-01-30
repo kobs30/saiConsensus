@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -75,6 +76,11 @@ func (is InternalService) execute(data interface{}) interface{} {
 	fmt.Println("REQUEST IS:::::::", request)
 	fmt.Println("TX_STR:::::", request.Tx)
 	script := request.Script
+	decodedScript, err := base64.StdEncoding.DecodeString(request.Script)
+	if err == nil {
+		script = string(decodedScript)
+	}
+
 	var vmScript VMscript
 	err = json.Unmarshal([]byte(script), &vmScript)
 	if err != nil {
@@ -94,7 +100,7 @@ func (is InternalService) execute(data interface{}) interface{} {
 		saveScriptData := make(map[string]string)
 		saveScriptData[request.Tx.MessageHash] = "saved"
 		CustomFld = append(CustomFld, saveScriptData)
-		return bson.M{"vm_processed": true, "vm_result": true, "vm_response": bson.M{"callNumber": counter, "D": Distribution, "V": Validators, "C": CustomFld, "F": Fee}}
+		return bson.M{"vm_processed": true, "vm_result": true, "vm_response": bson.M{"D": Distribution, "V": Validators, "C": CustomFld, "F": Fee}}
 	case "run":
 		// Curl example:
 		// curl --location --request GET 'http://185.229.119.188:8018' \
@@ -104,7 +110,7 @@ func (is InternalService) execute(data interface{}) interface{} {
 		Contract := parts[0]
 		Function := parts[1]
 		currentContract = Contract
-		runScript, _ := getMessageByHash(Contract, is)
+		runScript, _ := is.getMessageByHash(Contract)
 		logRecord := make(map[string]string)
 		logRecord[Contract] = "contract was run with " + Function
 		CustomFld = append(CustomFld, logRecord)
@@ -139,8 +145,8 @@ func (is InternalService) execute(data interface{}) interface{} {
 		initsettings["FeeSaveDataPerSymbol"] = "0.01"
 		CustomFld = append(CustomFld, initsettings)
 
-		fmt.Println("RETURN::::::::::::", bson.M{"GENESYS": "GENESYS", "vm_processed": true, "vm_result": true, "vm_response": bson.M{"callNumber": counter, "D": Distribution, "V": Validators, "C": CustomFld}})
-		return bson.M{"GENESYS": "GENESYS", "vm_processed": true, "vm_result": true, "vm_response": bson.M{"callNumber": counter, "D": Distribution, "V": Validators, "C": CustomFld}}
+		fmt.Println("RETURN::::::::::::", bson.M{"GENESYS": "GENESYS", "vm_processed": true, "vm_result": true, "vm_response": bson.M{"D": Distribution, "V": Validators, "C": CustomFld}})
+		return bson.M{"GENESYS": "GENESYS", "vm_processed": true, "vm_result": true, "vm_response": bson.M{"D": Distribution, "V": Validators, "C": CustomFld}}
 	}
 
 	vm := otto.New()
@@ -149,12 +155,8 @@ func (is InternalService) execute(data interface{}) interface{} {
 		return res
 	})
 
-	vm.Set("getRndSet", func(call otto.FunctionCall) otto.Value {
-		numbersInSet, _ := call.Argument(0).ToInteger()
-		distributionType, _ := call.Argument(1).ToString()
-		addtionalParams, _ := call.Argument(2).ToFloat()
-		set := generateRandomNumbers(distributionType, int(numbersInSet), addtionalParams, request.Rnd)
-		res, _ := vm.ToValue(set)
+	vm.Set("getSender", func(call otto.FunctionCall) otto.Value {
+		res, _ := vm.ToValue(request.Tx.SenderAddress)
 		return res
 	})
 
@@ -183,10 +185,21 @@ func (is InternalService) execute(data interface{}) interface{} {
 		if err != nil {
 			res, _ := vm.ToValue(false)
 			return res
-		} else {
-			res, _ := vm.ToValue(WalletBalance)
+		}
+		res, _ := vm.ToValue(WalletBalance)
+		return res
+	})
+
+	vm.Set("getTokenBalance", func(call otto.FunctionCall) otto.Value {
+		token, _ := call.Argument(0).ToString()
+		Wallet, _ := call.Argument(1).ToString()
+		WalletBalance, err := is.getTokenBalance(token, Wallet)
+		if err != nil {
+			res, _ := vm.ToValue(false)
 			return res
 		}
+		res, _ := vm.ToValue(WalletBalance)
+		return res
 	})
 
 	vm.Set("addValidator", func(call otto.FunctionCall) otto.Value {
@@ -198,10 +211,8 @@ func (is InternalService) execute(data interface{}) interface{} {
 			thevalidator[validatorWallet] = true
 			Validators = append(Validators, thevalidator)
 			return otto.TrueValue()
-		} else {
-			return otto.FalseValue()
 		}
-		return otto.Value{}
+		return otto.FalseValue()
 	})
 
 	vm.Set("addBalance", func(call otto.FunctionCall) otto.Value {
@@ -214,10 +225,8 @@ func (is InternalService) execute(data interface{}) interface{} {
 			balance[thewallet] = int64(thebalancetoadd)
 			Distribution = append(Distribution, balance)
 			return otto.TrueValue()
-		} else {
-			return otto.FalseValue()
 		}
-		return otto.Value{}
+		return otto.FalseValue()
 	})
 
 	vm.Set("transfer", func(call otto.FunctionCall) otto.Value {
@@ -241,7 +250,8 @@ func (is InternalService) execute(data interface{}) interface{} {
 			return otto.FalseValue()
 		}
 		to := currentContract
-		amount, _ := call.Argument(1).ToInteger()
+		amount, _ := call.Argument(0).ToInteger()
+		fmt.Println("transferToTheContract", request.Tx.SenderAddress, ">>>", to, ">>>", amount)
 		WalletBalance, _ := is.getBalance(request.Tx.SenderAddress)
 		if (WalletBalance - amount) > 0 {
 			balance := make(map[string]int64)
@@ -261,6 +271,7 @@ func (is InternalService) execute(data interface{}) interface{} {
 		}
 		to, _ := call.Argument(0).ToString()
 		amount, _ := call.Argument(1).ToInteger()
+		fmt.Println("transferFromTheContract", currentContract, ">>>", to, ">>>", amount)
 		contractBalance, _ := is.getBalance(currentContract)
 		if (contractBalance - amount) > 0 {
 			balance := make(map[string]int64)
@@ -278,7 +289,98 @@ func (is InternalService) execute(data interface{}) interface{} {
 	vm.Set("currentFee", func(call otto.FunctionCall) otto.Value {
 		return otto.Value{}
 	})
-	//vm.SetTimeout(time.Second)
+
+	vm.Set("Register", func(call otto.FunctionCall) otto.Value {
+		address, _ := call.Argument(0).ToString()
+		item, _ := call.Argument(1).ToString()
+		fmt.Println("Register Item:", item)
+		var itemObject RegType
+		err := json.Unmarshal([]byte(item), &itemObject)
+		if err != nil {
+			fmt.Println("Reigter unmarshal error::", err)
+			return otto.FalseValue()
+		}
+		if !is.Register(address, itemObject, &Register) {
+			return otto.FalseValue()
+		}
+		return otto.TrueValue()
+	})
+
+	vm.Set("getRndSet", func(call otto.FunctionCall) otto.Value {
+		distType, _ := call.Argument(0).ToString()
+		numbersInSet, _ := call.Argument(1).ToInteger()
+		min, _ := call.Argument(2).ToFloat()
+		max, _ := call.Argument(3).ToFloat()
+		param, _ := call.Argument(4).ToFloat()
+		fmt.Println("PARAMS", distType, int(numbersInSet), min, max, param, request.Rnd)
+		set := generateRandomNumbers(distType, int(numbersInSet), min, max, param, request.Rnd)
+		res, _ := vm.ToValue(set)
+		return res
+	})
+
+	vm.Set("addCustomFld", func(call otto.FunctionCall) otto.Value {
+		field, _ := call.Argument(0).ToString()
+		value, _ := call.Argument(1).ToString()
+		customData := make(map[string]string)
+		customData[field] = value
+		record, err := json.Marshal(customData)
+		if err != nil {
+			return otto.FalseValue()
+		}
+		CustomFldElement := make(map[string]string)
+		CustomFldElement[theScriptHash] = string(record)
+		CustomFld = append(CustomFld, CustomFldElement)
+		return otto.TrueValue()
+	})
+
+	vm.Set("addTokenBalance", func(call otto.FunctionCall) otto.Value {
+		token := currentContract
+		to, _ := call.Argument(0).ToString()
+		amount, _ := call.Argument(1).ToInteger()
+		theamount, err := is.addTokenBalance(token, to, amount, &CustomTokens)
+		if err != nil {
+			return otto.FalseValue()
+		}
+		res, _ := vm.ToValue(theamount)
+		return res
+	})
+
+	vm.Set("transferToken", func(call otto.FunctionCall) otto.Value {
+		token := currentContract
+		if !is.isRegistered(currentContract) {
+			return otto.FalseValue()
+		}
+		to, _ := call.Argument(0).ToString()
+		amount, _ := call.Argument(1).ToInteger()
+		WalletBalance, _ := is.getTokenBalance(token, request.Tx.SenderAddress)
+		if (WalletBalance - amount) > 0 {
+			fromAmount, err := is.addTokenBalance(token, to, int64(0-amount), &CustomTokens)
+			if err != nil {
+				return otto.FalseValue()
+			}
+			toAmount, err := is.addTokenBalance(token, to, amount, &CustomTokens)
+			if err != nil {
+				return otto.FalseValue()
+			}
+			fmt.Println(fromAmount, ">>>>", toAmount)
+			return otto.TrueValue()
+		} else {
+			return otto.FalseValue()
+		}
+	})
+	//vm.SetTimeout
+	/*
+		vm.Interrupt = make(chan func(), 1)
+		go func() {
+			time.Sleep(1000 * time.Millisecond)
+			vm.Interrupt <- func() {
+				fmt.Println("Script execution timed out.")
+			}
+		}()
+	*/
+	vmScript.Script = strings.Replace(vmScript.Script, "semicolon", ";", -1)
+	vmScript.Script = strings.Replace(vmScript.Script, "plus", "+", -1)
+	vmScript.Script = strings.Replace(vmScript.Script, "~percent~", "%", -1)
 	result, err := vm.Run(vmScript.Script)
 	if err != nil {
 		fmt.Println("error", err)
@@ -289,8 +391,9 @@ func (is InternalService) execute(data interface{}) interface{} {
 	CustomFldElement := make(map[string]string)
 	CustomFldElement[theScriptHash], _ = result.ToString()
 	CustomFld = append(CustomFld, CustomFldElement)
-	fmt.Println("RETURN ::::: ", bson.M{"vm_processed": true, "vm_result": true, "vm_response": bson.M{"callNumber": counter, "D": Distribution, "V": Validators, "C": CustomFld}})
-	return bson.M{"vm_processed": true, "vm_result": true, "vm_response": bson.M{"callNumber": counter, "D": Distribution, "V": Validators, "C": CustomFld, "F": Fee}}
+	fmt.Println("callNumber:", counter)
+	fmt.Println("RETURN ::::: ", bson.M{"vm_processed": true, "vm_result": true, "vm_response": bson.M{"D": Distribution, "V": Validators, "C": CustomFld}})
+	return bson.M{"vm_processed": true, "vm_result": true, "vm_response": bson.M{"D": Distribution, "V": Validators, "C": CustomFld, "F": Fee, "T": CustomTokens, "R": Register}}
 }
 
 func (is InternalService) getBalance(Wallet string) (int64, error) {
@@ -333,10 +436,51 @@ func (is InternalService) getBalance(Wallet string) (int64, error) {
 	return WalletBalance, nil
 }
 
-func getMessageByHash(MessageHash string, is InternalService) (string, error) {
+func (is InternalService) getTokenBalance(Token, Wallet string) (int64, error) {
+	//return 0,nil
+	//{"collection":"MessagesPool", "select": { "vm_response.T": { "$elemMatch": { "d1d79e9ed48a3905702143887ba62228eae892117231e1549a80e92f65267b24": { "$elemMatch": { "15UaBLZ7x6czXnFmHxzd3nFQNvXq7DJ3Gp": { "$exists": true } } } } } }, "options": {} }
+	_, blockhainData := is.Storage.Get("MessagesPool", bson.M{"vm_response.T": bson.M{"$elemMatch": bson.M{Token: bson.M{"$elemMatch": bson.M{Wallet: bson.M{"$exists": true}}}}}}, bson.M{})
+	//_, blockhainData := is.Storage.Get("MessagesPool", bson.M{"vm_response.T": bson.M{"$elemMatch": bson.M{Wallet: bson.M{"$exists": 1}}}}, bson.M{})
+	fmt.Println("blockhainData", string(blockhainData))
+	var jsonBlockchainData JSONRESP
+	err := json.Unmarshal(blockhainData, &jsonBlockchainData)
+	if err != nil {
+		fmt.Println("getTokenBalance datERROR", err)
+		return 0, err
+	}
+	if len(jsonBlockchainData.Result) > 0 {
+		fmt.Println("datVMResponse getTokenBalance", jsonBlockchainData.Result[0].VMResponse.T)
+	}
+
+	var tokenDistr []map[string][]map[string]int64
+	err = json.Unmarshal(jsonBlockchainData.Result[0].VMResponse.T, &tokenDistr)
+	if err != nil {
+		fmt.Println("getTokenBalance tokenDistr", err)
+		return 0, err
+	}
+	var WalletBalance int64
+	for _, el := range tokenDistr {
+		theTokenBalance, ok := el[Token]
+		if ok {
+			for _, b := range theTokenBalance {
+				balance, bok := b[Wallet]
+				if bok {
+					WalletBalance += balance
+				}
+			}
+		}
+	}
+	return WalletBalance, nil
+}
+
+func (is InternalService) getMessageByHash(MessageHash string) (string, error) {
 	// {"collection":"MessagesPool", "select": {"block_number": {"$exists":true}, "message_hash": "d8e7f63670d4e8ff434d031de226609bc1cb64eeae3ee496553f4cabb22a8c64","vm_processed": true,"vm_result": true}, "options": {} }
 	_, blockhainData := is.Storage.Get("MessagesPool", bson.M{"block_number": bson.M{"$exists": true}, "message_hash": MessageHash, "vm_processed": true, "vm_result": true}, bson.M{})
-	fmt.Println("blockhainData", string(blockhainData))
+	if len(blockhainData) > 0 {
+		fmt.Println("blockhainData", string(blockhainData))
+	} else {
+		fmt.Println("blockhainData empty", bson.M{"block_number": bson.M{"$exists": true}, "message_hash": MessageHash, "vm_processed": true, "vm_result": true})
+	}
 	var jsonBlockchainData JSONRESP
 	err := json.Unmarshal(blockhainData, &jsonBlockchainData)
 	if err != nil {
@@ -344,9 +488,15 @@ func getMessageByHash(MessageHash string, is InternalService) (string, error) {
 		return "", err
 	}
 	message := jsonBlockchainData.Result[0].Message.Message
+	decodedScript, err := base64.StdEncoding.DecodeString(message)
+	if err == nil {
+		message = string(decodedScript)
+	}
 	var vmScript VMscript
 	err = json.Unmarshal([]byte(message), &vmScript)
 	if err != nil {
+		fmt.Println("UnmarshalError 439 Message ", message)
+		fmt.Println("UnmarshalError 439", err)
 		return "", err
 	} else {
 		return vmScript.Script, nil
@@ -367,23 +517,42 @@ func addBalance(thebalance, balance int64) otto.Value {
 	}
 }
 
-func isRegistered(item string) bool {
+func (is InternalService) Register(address string, item RegType, Register *[]map[string]RegType) bool {
+	data := map[string]RegType{
+		address: item,
+	}
+	*Register = append(*Register, data)
 	return true
 }
 
-func ammAddTokenBalance(token string, amount int64, CustomTokens *[]map[string][]map[string]int64) (int64, error) {
-	if !isRegistered("amm_" + token) {
+func (is InternalService) isRegistered(item string) bool {
+	//bson.M{"vm_response.R": bson.M{"$elemMatch": bson.M{"123": bson.M{"$exists": 1}}}}
+	_, blockhainData := is.Storage.Get("MessagesPool", bson.M{"vm_response.R": bson.M{"$elemMatch": bson.M{"123": bson.M{"$exists": 1}}}, "vm_processed": true, "vm_result": true}, bson.M{})
+	var jsonBlockchainData JSONRESP
+	err := json.Unmarshal(blockhainData, &jsonBlockchainData)
+	if err != nil {
+		fmt.Println("datERROR", err)
+		return false
+	}
+	if len(jsonBlockchainData.Result) > 0 {
+		return true
+	}
+	return false
+}
+
+func (is InternalService) ammAddTokenBalance(token string, amount int64, CustomTokens *[]map[string][]map[string]int64) (int64, error) {
+	if !is.isRegistered("amm_" + token) {
 		return 0, nil
 	}
-	res, err := addTokenBalance(token, "amm_"+token, amount, CustomTokens)
+	res, err := is.addTokenBalance(token, "amm_"+token, amount, CustomTokens)
 	if err != nil {
 		return 0, err
 	}
 	return res, nil
 }
 
-func addTokenBalance(token, address string, amount int64, CustomTokens *[]map[string][]map[string]int64) (int64, error) {
-	if !isRegistered(token) {
+func (is InternalService) addTokenBalance(token, address string, amount int64, CustomTokens *[]map[string][]map[string]int64) (int64, error) {
+	if !is.isRegistered(token) {
 		return 0, errors.New("not registered")
 	}
 	data := map[string][]map[string]int64{
@@ -411,10 +580,11 @@ type Result struct {
 	MessageHash string `json:"message_hash"`
 	VMProcessed bool   `json:"vm_processed"`
 	VMResponse  struct {
-		C          json.RawMessage    `json:"C"`
-		D          []map[string]int64 `json:"D"`
-		V          []map[string]bool  `json:"V"`
-		CallNumber int                `json:"callNumber"`
+		C json.RawMessage    `json:"C"`
+		D []map[string]int64 `json:"D"`
+		V []map[string]bool  `json:"V"`
+		R json.RawMessage    `json:"R"`
+		T json.RawMessage    `json:"T"`
 	} `json:"vm_response"`
 	VMResult bool  `json:"vm_result"`
 	Votes    []int `json:"votes"`
@@ -424,24 +594,25 @@ type JSONRESP struct {
 	Result []Result `json:"result"`
 }
 
-func generateRandomNumbers(distType string, numbersInSet int, param float64, baseRand int64) []float64 {
+func generateRandomNumbers(distType string, numbersInSet int, min, max, param float64, baseRand int64) []float64 {
 
 	//distType := "pareto"
 	//param := 1.5
 	//generateRandomNumbers(distType, param)
 	//rand.Seed(time.Now().UnixNano())
-
+	fmt.Println("BGIN rndset")
 	var set []float64
 	rand.Seed(baseRand)
 	for i := 0; i < numbersInSet; i++ {
 		var num float64
 		switch distType {
 		case "uniform":
-			num = rand.Float64()
+			num = rand.Float64()*float64(max-min) + min
+			fmt.Println("NUM unifirm:", num)
 		case "exponential":
-			num = rand.ExpFloat64()
+			num = rand.ExpFloat64()*float64(max-min) + min
 		case "normal":
-			num = rand.NormFloat64()
+			num = rand.NormFloat64()*float64(max-min) + min
 		//https://go-recipes.dev/generating-random-numbers-with-go-616d30ccc926
 		//case "poisson":
 		//	num = float64(stats.Poisson(param))
@@ -456,5 +627,6 @@ func generateRandomNumbers(distType string, numbersInSet int, param float64, bas
 		}
 		set = append(set, num)
 	}
+	fmt.Println("THE set ", set)
 	return set
 }

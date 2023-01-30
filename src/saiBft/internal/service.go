@@ -2,7 +2,6 @@ package internal
 
 import (
 	"bytes"
-	"context"
 	"sync"
 
 	"github.com/iamthe1whoknocks/bft/models"
@@ -38,8 +37,8 @@ func Init(svc *saiService.Service) {
 	Service.Handler[AddValidator.Name] = AddValidator
 
 	// setting values to core context
-	Service.SetContext(btckeys)
-	svc.Logger.Sugar().Debugf("main - init - core context :[%+v]", Service.CoreCtx)
+	//Service.SetContext(btckeys)
+	//svc.Logger.Sugar().Debugf("main - init - core context :[%+v]", Service.CoreCtx)
 
 }
 
@@ -60,8 +59,8 @@ type InternalService struct {
 	MissedBlocksLinkCh   chan string   //chan to get link from p2pProxy handler
 	TxHandlerSyncCh      chan struct{} // chan to handle tx via http/cli
 	IsValidator          bool          //is node a validator
-	CoreCtx              context.Context
-	DuplicateStorageCh   chan *bytes.Buffer //chan for duplicate save/update/upsert requests to storage
+	//CoreCtx              context.Context
+	DuplicateStorageCh chan *bytes.Buffer //chan for duplicate save/update/upsert requests to storage
 }
 
 // global handler for registering handlers

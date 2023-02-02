@@ -158,6 +158,7 @@ nextRound:
 }
 
 func (s *InternalService) GetResultRoundMap(blockNumber, round int) (map[int64]int, error) {
+	s.GlobalService.Logger.Debug("rnd - request for rndMsg from db", zap.Int("block_number", blockNumber), zap.Int("round", round))
 	err, rndResult := s.Storage.Get(RndMessagesPoolCol, bson.M{"message.block_number": blockNumber, "message.round": round}, bson.M{}, s.GlobalService.GetConfig(SaiStorageToken, "").String())
 	if err != nil {
 		s.GlobalService.Logger.Error("processing - rnd processing - get rnd msg for round and block", zap.Error(err))

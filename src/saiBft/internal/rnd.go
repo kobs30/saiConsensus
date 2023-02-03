@@ -71,9 +71,7 @@ func (s *InternalService) rndProcessing(saiBTCAddress, saiP2pAddress, storageTok
 	source := rand.New(rand.NewSource(time.Now().UnixNano()))
 	rnd := source.Int63n(100)
 	s.GlobalService.Logger.Debug("rnd generated", zap.Int64("rnd", rnd))
-
 	baseRnd := int64(0)
-	baseRndExists := false
 
 nextRound:
 	s.GlobalService.Logger.Debug("process - rnd processing -  new round", zap.Int("round", rndRound), zap.Int("rnd", int(rnd)))
@@ -96,12 +94,13 @@ nextRound:
 		return 0, err
 	}
 
-	//	s.GlobalService.Logger.Debug("process - rnd - put msg to storage", zap.Int("block_number", blockNumber), zap.Int("round", rndRound), zap.Any("rndMsg", rndMsg))
-	// err, _ = s.Storage.Put(RndMessagesPoolCol, rndMsg, storageToken)
-	// if err != nil {
-	// 	s.GlobalService.Logger.Error("process - rnd processing - put to db", zap.Error(err))
-	// 	return 0, err
-	// }
+	s.GlobalService.Logger.Debug("process - rnd - put msg to storage", zap.Int("block_number", blockNumber), zap.Int("round", rndRound), zap.Any("rndMsg", rndMsg))
+
+	err, _ = s.Storage.Put(RndMessagesPoolCol, rndMsg, storageToken)
+	if err != nil {
+		s.GlobalService.Logger.Error("process - rnd processing - put to db", zap.Error(err))
+		return 0, err
+	}
 
 	requiredVotes := math.Ceil(float64(len(s.Validators)) * 7 / 10)
 
@@ -122,21 +121,19 @@ nextRound:
 	s.GlobalService.Logger.Debug("process - rnd - got result map", zap.Any("map", resultMap), zap.Float64("required votes", requiredVotes), zap.Int("round", rndRound))
 
 	for k, v := range resultMap {
-		if k == rnd {
-			v++
-		}
 		if math.Ceil(float64(v)) >= requiredVotes {
 			rnd = k
 			baseRnd = k
-			baseRndExists = true
 		}
 	}
 
 	if baseRnd == 0 {
+		var _rnd int64 = 0
 		for k := range resultMap {
-			rnd += k
+			_rnd += k
 			s.GlobalService.Logger.Debug("process - rnd - new rnd after sum", zap.Float64("required votes", requiredVotes), zap.Int("round", rndRound), zap.Int("new rnd", int(rnd)))
 		}
+		rnd = _rnd
 	}
 
 	rndRound++
@@ -145,7 +142,7 @@ nextRound:
 		goto nextRound
 	}
 
-	if baseRndExists {
+	if baseRnd > 0 {
 		return baseRnd, nil
 	} else {
 		// rnd, err := getRndFromDirectMsg()

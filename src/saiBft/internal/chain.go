@@ -550,7 +550,7 @@ func (s *InternalService) GetMissedBlocks(blockNumber int, storageToken string) 
 					tempMap[b.Block.Number] = &b
 				}
 			} else {
-				tempMap[b.Block.Number] = block
+				tempMap[b.Block.Number] = &b
 			}
 		}
 
@@ -628,7 +628,7 @@ func (s *InternalService) formSyncRequest(blockNumber int, storageToken string) 
 		s.GlobalService.Logger.Error("chain - handleBlockCandidate - formSyncRequest - unmarshal result of last block from blockchain collection", zap.Error(err), zap.String("data", string(data)))
 		return nil, err
 	}
-	block := blocks[0]
+	block := blocks[0] //todo: check it
 	currentBlock := block.Block.Number
 
 	// we need only 1 exact block

@@ -550,7 +550,7 @@ func (s *InternalService) GetMissedBlocks(blockNumber int, storageToken string) 
 					tempMap[b.Block.Number] = &b
 				}
 			} else {
-				tempMap[b.Block.Number] = block
+				tempMap[b.Block.Number] = &b
 			}
 		}
 

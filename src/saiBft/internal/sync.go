@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/iamthe1whoknocks/bft/models"
+	"go.uber.org/zap"
 )
 
 // sync node by fixing sleep value
@@ -24,6 +25,7 @@ func (s *InternalService) syncSleep(msg *models.ConsensusMessage, fromHandler bo
 			if !fromHandler {
 				delta := time.Now().UnixNano() - t
 				s.Sleep = time.Duration(s.Sleep.Nanoseconds() - delta)
+				s.GlobalService.Logger.Debug("process - syncSleep", zap.Duration("new sleep", s.Sleep))
 				return
 			} else {
 				return

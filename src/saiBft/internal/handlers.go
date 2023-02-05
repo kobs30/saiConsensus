@@ -150,6 +150,8 @@ var HandleMessage = saiService.HandlerElement{
 				Service.GlobalService.Logger.Sugar().Error(err) // DEBUG
 				return nil, fmt.Errorf("handlers - handle message - marshal bytes : %w", err)
 			}
+			Service.syncSleep(&msg, true)
+
 			Service.MsgQueue <- &msg
 		case models.TransactionMsgType:
 			msg := models.Tx{}

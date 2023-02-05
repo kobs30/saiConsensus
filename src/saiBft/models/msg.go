@@ -47,3 +47,9 @@ func DetectMsgTypeFromMap(m map[string]interface{}) (string, error) {
 		return "", errors.New("unknown msg type")
 	}
 }
+
+// struct for sync sleep value via consensus msg
+type SyncConsensusKey struct {
+	BlockNumber int
+	Round       int
+}

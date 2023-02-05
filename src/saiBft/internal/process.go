@@ -541,15 +541,13 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 		newBlock.Block.PreviousBlockHash = ""
 	}
 
-	newBlock.BlockHash = newBlock.Block.BlockHash
-
 	for _, tx := range txMsgs {
 		err, _ := s.Storage.Update(MessagesPoolCol, bson.M{"executed_hash": tx.ExecutedHash}, bson.M{"block_hash": newBlock.BlockHash, "block_number": newBlock.Block.Number}, storageToken)
 		if err != nil {
 			s.GlobalService.Logger.Error("process - round == 7 - form and save new block - update tx blockhash", zap.Error(err))
 			return nil, err
 		}
-		tx.BlockHash = newBlock.BlockHash
+		tx.BlockHash = "todo: circular reference"
 		tx.BlockNumber = newBlock.Block.Number
 		newBlock.Block.Messages = append(newBlock.Block.Messages, tx)
 	}

@@ -10,7 +10,7 @@ import (
 )
 
 func (s *Service) StartHttp() {
-	port := s.GetConfig("http.port", 8080).(int)
+	port := s.GetConfig("http.port", 8080).Int()
 	log.Println("Http server has been started:", port)
 
 	http.HandleFunc("/", s.handleHttpConnections)
@@ -23,7 +23,7 @@ func (s *Service) StartHttp() {
 }
 
 func (s *Service) StartWS() {
-	port := s.GetConfig("ws.port", 8081).(int)
+	port := s.GetConfig("ws.port", 8081).Int()
 	log.Println("WS server has been started:", port)
 
 	r := http.NewServeMux()
@@ -38,7 +38,7 @@ func (s *Service) StartWS() {
 }
 
 func (s *Service) StartSocket() {
-	port := s.GetConfig("socket.port", 8000).(int)
+	port := s.GetConfig("socket.port", 8000).Int()
 	log.Println("Socket server has been started:", port)
 
 	ln, nErr := net.Listen("tcp", ":"+strconv.Itoa(port))

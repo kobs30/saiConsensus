@@ -1,7 +1,6 @@
 package models
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -41,7 +40,7 @@ func (m *TransactionMessage) Validate() error {
 }
 
 // Hashing tx
-func (m *Tx) GetHash() (string, error) {
+func (m *Tx) SetHash() error {
 	b, err := json.Marshal(&Tx{
 		SenderAddress: m.SenderAddress,
 		Message:       m.Message,
@@ -49,11 +48,12 @@ func (m *Tx) GetHash() (string, error) {
 		Type:          m.Type,
 	})
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	hash := sha256.Sum256(b)
-	return hex.EncodeToString(hash[:]), nil
+	m.MessageHash = hex.EncodeToString(hash[:])
+	return nil
 }
 
 // get executed hash of TransactionMessage
@@ -72,28 +72,53 @@ func (m *TransactionMessage) GetExecutedHash() error {
 	return nil
 }
 
-func CreateTxMsg(ctx context.Context, argStr string) (*TransactionMessage, error) {
+func CreateTxMsg(keys *BtcKeys, address string, argStr string) (*TransactionMessage, error) {
 	transactionMessage := &TransactionMessage{
 		Tx: &Tx{
 			Type:          TransactionMsgType,
-			SenderAddress: ctx.Value("saiBTCKeys").(*BtcKeys).Address,
+			SenderAddress: keys.Address,
 			Message:       argStr,
 			Nonce:         int(time.Now().Unix()),
 		},
 	}
 
-	hash, err := transactionMessage.Tx.GetHash()
+	err := transactionMessage.HashAndSign(address, keys.Private)
 	if err != nil {
-		return nil, fmt.Errorf("handlers  - createTx - count tx message hash: %w", err)
+		return nil, err
 	}
-	transactionMessage.Tx.MessageHash = hash
-
-	btcResp, err := SignMessage(transactionMessage, ctx.Value("saiBTC_address").(string), ctx.Value("saiBTCKeys").(*BtcKeys).Private)
-	if err != nil {
-		return nil, fmt.Errorf("handlers  - createTx - sign tx message: %w", err)
-	}
-	transactionMessage.Tx.SenderSignature = btcResp.Signature
-	transactionMessage.MessageHash = hash
 
 	return transactionMessage, nil
+}
+
+func (m *TransactionMessage) SignMessage(address, privateKey string) error {
+	data, err := json.Marshal(&Tx{
+		SenderAddress: m.Tx.SenderAddress,
+		Message:       m.Tx.Message,
+		Nonce:         m.Tx.Nonce,
+		Type:          m.Tx.Type,
+	})
+	if err != nil {
+		return err
+	}
+	preparedString := fmt.Sprintf("method=signMessage&p=%s&message=%s", privateKey, string(data))
+	signature, err := getBTCResponse(preparedString, address)
+	if err != nil {
+		return err
+	}
+	m.Tx.SenderSignature = signature
+	return nil
+}
+
+//fill hash and signature in tx message
+func (m *TransactionMessage) HashAndSign(address, privateKey string) error {
+	err := m.Tx.SetHash()
+	if err != nil {
+		return err
+	}
+	m.MessageHash = m.Tx.MessageHash
+	err = m.SignMessage(address, privateKey)
+	if err != nil {
+		return err
+	}
+	return nil
 }

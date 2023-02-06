@@ -97,15 +97,6 @@ func (s *InternalService) Processing() {
 	startLoop:
 		round := 0
 		s.GlobalService.Logger.Debug("start loop,round = 0") // DEBUG
-		time.Sleep(1 * time.Second)                          //DEBUG
-
-		//clean block candidate collection at round = 0
-
-		err := s.removeCandidates(s.GlobalService.GetConfig(SaiStorageToken, "").String())
-		if err != nil {
-			s.GlobalService.Logger.Error("process - clean blockCandidates collection", zap.Error(err))
-			continue
-		}
 
 		// get last block from blockchain collection or create initial block
 		block, err := s.getLastBlockFromBlockChain(s.GlobalService.GetConfig(SaiStorageToken, "").String(), s.GlobalService.GetConfig(SaiBTCaddress, "").String())
@@ -165,11 +156,20 @@ func (s *InternalService) Processing() {
 				goto startLoop
 			}
 
-			time.Sleep(time.Duration(s.GlobalService.Configuration["sleep"].(int)) * time.Second)
+			time.Sleep(time.Duration(time.Duration(s.Sleep) * time.Second))
 			round++
 			goto checkRound
 
 		} else {
+			//clean block candidate collection at round = 5
+			if round == 5 {
+				err := s.removeCandidates(s.GlobalService.GetConfig(SaiStorageToken, "").String())
+				if err != nil {
+					s.GlobalService.Logger.Error("process - clean blockCandidates collection", zap.Error(err))
+					continue
+				}
+			}
+
 			// get consensus messages for the round
 			msgs, err := s.getConsensusMsgForTheRound(round, block.Block.Number, s.GlobalService.GetConfig(SaiStorageToken, "").String())
 			if err != nil {
@@ -233,6 +233,8 @@ func (s *InternalService) Processing() {
 					goto startLoop
 				}
 
+				Service.syncSleep(newConsensusMsg, true)
+
 				err = s.broadcastMsg(newConsensusMsg, s.GlobalService.GetConfig(SaiP2pAddress, "").String(), false)
 				if err != nil {
 					goto startLoop
@@ -241,7 +243,7 @@ func (s *InternalService) Processing() {
 
 			round++
 
-			time.Sleep(time.Duration(s.GlobalService.Configuration["sleep"].(int)) * time.Second)
+			time.Sleep(time.Duration(time.Duration(s.Sleep) * time.Second))
 
 			if round < maxRoundNumber {
 				goto checkRound
@@ -257,8 +259,6 @@ func (s *InternalService) Processing() {
 				if err != nil {
 					goto startLoop
 				}
-
-				//time.Sleep(time.Duration(s.GlobalService.Configuration["sleep"].(int)) * time.Second)
 
 				goto startLoop
 			}

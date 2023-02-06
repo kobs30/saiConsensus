@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/robertkrimen/otto"
 	"math/rand"
+	"regexp"
 	"strings"
 	// https://go.libhunt.com/otto-alternatives    other languages alternatives
 	"github.com/saiset-co/saiService"
@@ -53,11 +54,19 @@ type RegType struct {
 	Description string `json:"description"`
 }
 
+func updateInProcessingBalance(block int, Distribution []map[string]int64) bool {
+	return true
+}
+
+func getInProcessingBalance(block int, wallet string) int64 {
+	return 0
+}
+
 func (is InternalService) execute(data interface{}) interface{} {
 	counter++
 	var Validators []map[string]bool
 	var Distribution []map[string]int64
-	var CustomFld []map[string]string
+	var CustomFld []map[string]string // []map[string]interface{}
 	var Fee float64
 	var request VMrequest
 	fmt.Println("REQUEST:::::::", data)
@@ -114,7 +123,26 @@ func (is InternalService) execute(data interface{}) interface{} {
 		logRecord := make(map[string]string)
 		logRecord[Contract] = "contract was run with " + Function
 		CustomFld = append(CustomFld, logRecord)
-		vmScript.Script = runScript + " " + Function
+		// Security check!!!
+		//!!! check that Function contains only not private functions declared in the contract and nohing more!!!
+		//get declared functions from contract
+		functionsList := fetchJSfunctions(runScript)
+		//get(form) functions call from contract.cript
+		code := Function // "mid(12,'asdweeferferrtgr'); v = 12*getRes(); load(mid(12.getName());"
+		myFuncs := functionsList
+
+		var Execute string
+		for _, f := range myFuncs {
+			re := regexp.MustCompile(f + `\(.*?\)`)
+			matches := re.FindAllString(code, -1)
+			for _, match := range matches {
+				Execute += match + ";"
+				fmt.Println(match)
+			}
+		}
+		vmScript.Script = runScript + " " + Execute
+		// ??? if not return vm_result false ???
+		//vmScript.Script = runScript + " " + Function
 	}
 
 	theSender := request.Tx.SenderAddress // request.Tx.Sender
@@ -128,12 +156,15 @@ func (is InternalService) execute(data interface{}) interface{} {
 		initbalance := make(map[string]int64)
 		initbalance[theSender] = int64(1000)
 		Distribution = append(Distribution, initbalance)
+		updateInProcessingBalance(request.Block, Distribution)
 		initbalance = make(map[string]int64)
 		initbalance["139uwuYCM1knfLdyVX2yjzwhDDz73Zx7Sj"] = int64(1000)
 		Distribution = append(Distribution, initbalance)
+		updateInProcessingBalance(request.Block, Distribution)
 		initbalance = make(map[string]int64)
 		initbalance["1PKVs1mizz4abZ8zvk4gbUNdSvmMXTFfEh"] = int64(1000)
 		Distribution = append(Distribution, initbalance)
+		updateInProcessingBalance(request.Block, Distribution)
 
 		initsettings := make(map[string]string)
 		initsettings["FeePerMessageSymbol"] = "0.01"
@@ -167,15 +198,9 @@ func (is InternalService) execute(data interface{}) interface{} {
 		var theOptions interface{}
 		_ = json.Unmarshal([]byte(Query), &theQuery)
 		_ = json.Unmarshal([]byte(Options), &theOptions)
-		_, blockhainData := is.Storage.Get("MessagesPool", theQuery, theOptions)
-		fmt.Println("blockhainData", string(blockhainData))
-		res, _ := vm.ToValue(string(blockhainData))
-		return res
-	})
-
-	vm.Set("getValidators", func(call otto.FunctionCall) otto.Value {
-		// {"collection":"MessagesPool","options":{},"select":{"vm_response.V": {"$ne" : null}  }}
-		res, _ := vm.ToValue("Validators")
+		_, blockchainData := is.Storage.Get("MessagesPool", theQuery, theOptions)
+		fmt.Println("blockchainData", string(blockchainData))
+		res, _ := vm.ToValue(string(blockchainData))
 		return res
 	})
 
@@ -205,14 +230,20 @@ func (is InternalService) execute(data interface{}) interface{} {
 	vm.Set("addValidator", func(call otto.FunctionCall) otto.Value {
 		fmt.Println("Add validator")
 		validatorWallet, _ := call.Argument(0).ToString()
-		//fmt.Println("Hello, addBalance world!", fnWrapper)
-		if getValidatorWalletLicence(validatorWallet) {
-			thevalidator := make(map[string]bool)
-			thevalidator[validatorWallet] = true
-			Validators = append(Validators, thevalidator)
+		if is.setValidator(validatorWallet, &Validators) {
 			return otto.TrueValue()
 		}
 		return otto.FalseValue()
+	})
+
+	vm.Set("getValidators", func(call otto.FunctionCall) otto.Value {
+		// {"collection":"MessagesPool","options":{},"select":{"vm_response.V": {"$ne" : null}  }}
+		validatorsList, err := is.getValidators()
+		if err != nil {
+			return otto.FalseValue()
+		}
+		res, _ := vm.ToValue(validatorsList)
+		return res
 	})
 
 	vm.Set("addBalance", func(call otto.FunctionCall) otto.Value {
@@ -224,6 +255,7 @@ func (is InternalService) execute(data interface{}) interface{} {
 			balance := make(map[string]int64)
 			balance[thewallet] = int64(thebalancetoadd)
 			Distribution = append(Distribution, balance)
+			updateInProcessingBalance(request.Block, Distribution)
 			return otto.TrueValue()
 		}
 		return otto.FalseValue()
@@ -237,9 +269,11 @@ func (is InternalService) execute(data interface{}) interface{} {
 			balance := make(map[string]int64)
 			balance[request.Tx.SenderAddress] = int64(0 - amount)
 			Distribution = append(Distribution, balance)
+			updateInProcessingBalance(request.Block, Distribution)
 			balance = make(map[string]int64)
 			balance[to] = int64(amount)
 			Distribution = append(Distribution, balance)
+			updateInProcessingBalance(request.Block, Distribution)
 			return otto.TrueValue()
 		} else {
 			return otto.FalseValue()
@@ -257,9 +291,11 @@ func (is InternalService) execute(data interface{}) interface{} {
 			balance := make(map[string]int64)
 			balance[request.Tx.SenderAddress] = int64(0 - amount)
 			Distribution = append(Distribution, balance)
+			updateInProcessingBalance(request.Block, Distribution)
 			balance = make(map[string]int64)
 			balance[to] = int64(amount)
 			Distribution = append(Distribution, balance)
+			updateInProcessingBalance(request.Block, Distribution)
 			return otto.TrueValue()
 		} else {
 			return otto.FalseValue()
@@ -277,9 +313,11 @@ func (is InternalService) execute(data interface{}) interface{} {
 			balance := make(map[string]int64)
 			balance[currentContract] = int64(0 - amount)
 			Distribution = append(Distribution, balance)
+			updateInProcessingBalance(request.Block, Distribution)
 			balance = make(map[string]int64)
 			balance[to] = int64(amount)
 			Distribution = append(Distribution, balance)
+			updateInProcessingBalance(request.Block, Distribution)
 			return otto.TrueValue()
 		} else {
 			return otto.FalseValue()
@@ -337,8 +375,12 @@ func (is InternalService) execute(data interface{}) interface{} {
 		token := currentContract
 		to, _ := call.Argument(0).ToString()
 		amount, _ := call.Argument(1).ToInteger()
+		fmt.Println("Add token balance Set", token, "..", to, "..", amount)
+		fmt.Println("Add token balance CustomTokens", CustomTokens)
 		theamount, err := is.addTokenBalance(token, to, amount, &CustomTokens)
+		fmt.Println("Add token balance CustomTokens append", CustomTokens)
 		if err != nil {
+			fmt.Println("Add token balance Set error", err)
 			return otto.FalseValue()
 		}
 		res, _ := vm.ToValue(theamount)
@@ -378,9 +420,11 @@ func (is InternalService) execute(data interface{}) interface{} {
 			}
 		}()
 	*/
+	// remove the following ======
 	vmScript.Script = strings.Replace(vmScript.Script, "semicolon", ";", -1)
 	vmScript.Script = strings.Replace(vmScript.Script, "plus", "+", -1)
 	vmScript.Script = strings.Replace(vmScript.Script, "~percent~", "%", -1)
+	//============================
 	result, err := vm.Run(vmScript.Script)
 	if err != nil {
 		fmt.Println("error", err)
@@ -392,7 +436,7 @@ func (is InternalService) execute(data interface{}) interface{} {
 	CustomFldElement[theScriptHash], _ = result.ToString()
 	CustomFld = append(CustomFld, CustomFldElement)
 	fmt.Println("callNumber:", counter)
-	fmt.Println("RETURN ::::: ", bson.M{"vm_processed": true, "vm_result": true, "vm_response": bson.M{"D": Distribution, "V": Validators, "C": CustomFld}})
+	fmt.Println("RETURN ::::: ", bson.M{"vm_processed": true, "vm_result": true, "vm_response": bson.M{"D": Distribution, "V": Validators, "C": CustomFld, "F": Fee, "T": CustomTokens, "R": Register}})
 	return bson.M{"vm_processed": true, "vm_result": true, "vm_response": bson.M{"D": Distribution, "V": Validators, "C": CustomFld, "F": Fee, "T": CustomTokens, "R": Register}}
 }
 
@@ -507,6 +551,35 @@ func getValidatorWalletLicence(wallet string) bool {
 	return true
 }
 
+func (is InternalService) setValidator(wallet string, Validators *[]map[string]bool) bool {
+	thevalidator := make(map[string]bool)
+	thevalidator[wallet] = true
+	*Validators = append(*Validators, thevalidator)
+	return true
+}
+
+func (is InternalService) getValidators() ([]string, error) {
+	//{"collection":"MessagesPool", "select": { "vm_response.V": {"$ne":null} } , "options": {} }
+	_, blockchainData := is.Storage.Get("MessagesPool", bson.M{"vm_response.V": bson.M{"$ne": nil}}, bson.M{})
+	var jsonBlockchainData JSONRESP
+	err := json.Unmarshal(blockchainData, &jsonBlockchainData)
+	if err != nil {
+		fmt.Println("datERROR", err)
+		return nil, err
+	}
+	var Validators []string
+	for _, el := range jsonBlockchainData.Result {
+		for _, d := range el.VMResponse.V {
+			for validator, valid := range d {
+				if valid {
+					Validators = append(Validators, validator)
+				}
+			}
+		}
+	}
+	return Validators, nil
+}
+
 func addBalance(thebalance, balance int64) otto.Value {
 	thebalance += balance
 	fmt.Println("adding balance")
@@ -527,17 +600,33 @@ func (is InternalService) Register(address string, item RegType, Register *[]map
 
 func (is InternalService) isRegistered(item string) bool {
 	//bson.M{"vm_response.R": bson.M{"$elemMatch": bson.M{"123": bson.M{"$exists": 1}}}}
-	_, blockhainData := is.Storage.Get("MessagesPool", bson.M{"vm_response.R": bson.M{"$elemMatch": bson.M{"123": bson.M{"$exists": 1}}}, "vm_processed": true, "vm_result": true}, bson.M{})
+	_, blockhainData := is.Storage.Get("MessagesPool", bson.M{"vm_response.R": bson.M{"$elemMatch": bson.M{item: bson.M{"$exists": 1}}}, "vm_processed": true, "vm_result": true}, bson.M{})
 	var jsonBlockchainData JSONRESP
 	err := json.Unmarshal(blockhainData, &jsonBlockchainData)
 	if err != nil {
 		fmt.Println("datERROR", err)
 		return false
 	}
+	fmt.Println("IS registered", jsonBlockchainData, ">>>", bson.M{"vm_response.R": bson.M{"$elemMatch": bson.M{item: bson.M{"$exists": 1}}}, "vm_processed": true, "vm_result": true})
 	if len(jsonBlockchainData.Result) > 0 {
 		return true
 	}
 	return false
+}
+
+func (is InternalService) addTokenBalance(token, address string, amount int64, CustomTokens *[]map[string][]map[string]int64) (int64, error) {
+	if !is.isRegistered(token) {
+		return 0, errors.New("not registered")
+	}
+	data := map[string][]map[string]int64{
+		token: []map[string]int64{
+			{address: amount},
+		},
+	}
+	fmt.Println("Add token balance FN", CustomTokens)
+	*CustomTokens = append(*CustomTokens, data)
+	fmt.Println("Add token balance FN append", CustomTokens)
+	return amount, nil
 }
 
 func (is InternalService) ammAddTokenBalance(token string, amount int64, CustomTokens *[]map[string][]map[string]int64) (int64, error) {
@@ -551,17 +640,87 @@ func (is InternalService) ammAddTokenBalance(token string, amount int64, CustomT
 	return res, nil
 }
 
-func (is InternalService) addTokenBalance(token, address string, amount int64, CustomTokens *[]map[string][]map[string]int64) (int64, error) {
-	if !is.isRegistered(token) {
-		return 0, errors.New("not registered")
+func (is InternalService) ammExchange(wallet, token string, amount int64, CustomTokens *[]map[string][]map[string]int64, Distribution *[]map[string]int64) bool {
+	exchRate, ammTokenBalance, ammBalance := is.ammGetExchangeRate(token)
+	if exchRate == 0 {
+		return false
 	}
-	data := map[string][]map[string]int64{
-		token: []map[string]int64{
-			{address: amount},
-		},
+	if amount < 0 && ammBalance+amount*int64(exchRate) > 0 {
+		ammTokenBalance := amount
+		ammBalance := amount * int64(exchRate)
+		walletTokenBalance := amount
+		walletBalance := -amount * int64(exchRate)
+
+		_, err := is.addTokenBalance(token, wallet, walletTokenBalance, CustomTokens)
+		if err != nil {
+			return false
+		}
+		_, err = is.addTokenBalance(token, "amm_"+token, ammTokenBalance, CustomTokens)
+		if err != nil {
+			return false
+		}
+		balance := make(map[string]int64)
+		balance["amm_"+token] = ammBalance
+		*Distribution = append(*Distribution, balance)
+		//updateInProcessingBalance(request.Block,*Distribution)
+		balance = make(map[string]int64)
+		balance[wallet] = walletBalance
+		*Distribution = append(*Distribution, balance)
+		//updateInProcessingBalance(request.Block,*Distribution)
 	}
-	*CustomTokens = append(*CustomTokens, data)
-	return amount, nil
+	if amount > 0 && ammTokenBalance-amount*int64(exchRate) > 0 {
+		ammTokenBalance := -amount
+		ammBalance := -amount * int64(exchRate)
+		walletTokenBalance := -amount
+		walletBalance := amount * int64(exchRate)
+
+		_, err := is.addTokenBalance(token, wallet, walletTokenBalance, CustomTokens)
+		if err != nil {
+			return false
+		}
+		_, err = is.addTokenBalance(token, "amm_"+token, ammTokenBalance, CustomTokens)
+		if err != nil {
+			return false
+		}
+		balance := make(map[string]int64)
+		balance["amm_"+token] = ammBalance
+		*Distribution = append(*Distribution, balance)
+		//updateInProcessingBalance(request.Block,*Distribution)
+		balance = make(map[string]int64)
+		balance[wallet] = walletBalance
+		*Distribution = append(*Distribution, balance)
+		//updateInProcessingBalance(request.Block,*Distribution)
+	}
+	return true
+}
+
+func (is InternalService) ammGetExchangeRate(token string) (float64, int64, int64) {
+	balanceCoins, err := is.getBalance("amm_" + token)
+	if err != nil {
+		balanceCoins = 0
+	}
+	balanceTokens, err := is.getTokenBalance(token, "amm_"+token)
+	if err != nil {
+		balanceTokens = 0
+	}
+	var exchRate float64
+	if balanceCoins == 0 || balanceTokens == 0 {
+		exchRate = 0
+	} else {
+		exchRate = float64(balanceTokens / balanceCoins)
+	}
+	return exchRate, balanceTokens, balanceCoins
+}
+
+func fetchJSfunctions(code string) []string {
+	//code := "function greet() {\n console.log('Hello, World!'); \n}\nfunction bye() {\n console.log('Goodbye!'); \n}"
+	functionDeclarationRegex := regexp.MustCompile(`function\s+(\w+)\s*\(`)
+	functions := functionDeclarationRegex.FindAllStringSubmatch(code, -1)
+	var functionsLit []string
+	for _, match := range functions {
+		functionsLit = append(functionsLit, match[1])
+	}
+	return functionsLit
 }
 
 type Result struct {

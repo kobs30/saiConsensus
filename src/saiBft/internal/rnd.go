@@ -110,7 +110,7 @@ nextRound:
 		return 0, err
 	}
 
-	time.Sleep(time.Duration(s.GlobalService.GetConfig(SaiSleep, 4).Int()) * time.Second)
+	time.Sleep(time.Duration(time.Duration(s.Sleep) * time.Second))
 
 	resultMap, err := s.GetResultRoundMap(blockNumber, rndRound+1)
 	if err != nil {

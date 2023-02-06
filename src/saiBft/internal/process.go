@@ -97,7 +97,6 @@ func (s *InternalService) Processing() {
 	startLoop:
 		round := 0
 		s.GlobalService.Logger.Debug("start loop,round = 0") // DEBUG
-		time.Sleep(1 * time.Second)                          //DEBUG
 
 		// get last block from blockchain collection or create initial block
 		block, err := s.getLastBlockFromBlockChain(s.GlobalService.GetConfig(SaiStorageToken, "").String(), s.GlobalService.GetConfig(SaiBTCaddress, "").String())
@@ -157,7 +156,7 @@ func (s *InternalService) Processing() {
 				goto startLoop
 			}
 
-			time.Sleep(time.Duration(s.GlobalService.Configuration["sleep"].(int)) * time.Second)
+			time.Sleep(time.Duration(time.Duration(s.Sleep) * time.Second))
 			round++
 			goto checkRound
 
@@ -234,6 +233,8 @@ func (s *InternalService) Processing() {
 					goto startLoop
 				}
 
+				Service.syncSleep(newConsensusMsg, true)
+
 				err = s.broadcastMsg(newConsensusMsg, s.GlobalService.GetConfig(SaiP2pAddress, "").String(), false)
 				if err != nil {
 					goto startLoop
@@ -242,7 +243,7 @@ func (s *InternalService) Processing() {
 
 			round++
 
-			time.Sleep(time.Duration(s.GlobalService.Configuration["sleep"].(int)) * time.Second)
+			time.Sleep(time.Duration(time.Duration(s.Sleep) * time.Second))
 
 			if round < maxRoundNumber {
 				goto checkRound
@@ -258,8 +259,6 @@ func (s *InternalService) Processing() {
 				if err != nil {
 					goto startLoop
 				}
-
-				//time.Sleep(time.Duration(s.GlobalService.Configuration["sleep"].(int)) * time.Second)
 
 				goto startLoop
 			}

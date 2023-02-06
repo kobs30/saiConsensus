@@ -99,14 +99,6 @@ func (s *InternalService) Processing() {
 		s.GlobalService.Logger.Debug("start loop,round = 0") // DEBUG
 		time.Sleep(1 * time.Second)                          //DEBUG
 
-		//clean block candidate collection at round = 0
-
-		err := s.removeCandidates(s.GlobalService.GetConfig(SaiStorageToken, "").String())
-		if err != nil {
-			s.GlobalService.Logger.Error("process - clean blockCandidates collection", zap.Error(err))
-			continue
-		}
-
 		// get last block from blockchain collection or create initial block
 		block, err := s.getLastBlockFromBlockChain(s.GlobalService.GetConfig(SaiStorageToken, "").String(), s.GlobalService.GetConfig(SaiBTCaddress, "").String())
 		if err != nil {
@@ -170,6 +162,15 @@ func (s *InternalService) Processing() {
 			goto checkRound
 
 		} else {
+			//clean block candidate collection at round = 5
+			if round == 5 {
+				err := s.removeCandidates(s.GlobalService.GetConfig(SaiStorageToken, "").String())
+				if err != nil {
+					s.GlobalService.Logger.Error("process - clean blockCandidates collection", zap.Error(err))
+					continue
+				}
+			}
+
 			// get consensus messages for the round
 			msgs, err := s.getConsensusMsgForTheRound(round, block.Block.Number, s.GlobalService.GetConfig(SaiStorageToken, "").String())
 			if err != nil {

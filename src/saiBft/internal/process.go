@@ -548,6 +548,8 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 			s.GlobalService.Logger.Error("process - round == 7 - form and save new block - update tx blockhash", zap.Error(err))
 			return nil, err
 		}
+
+		tx.Votes = [7]uint64{}
 		tx.BlockHash = "todo: circular reference"
 		tx.BlockNumber = newBlock.Block.Number
 		newBlock.Block.Messages = append(newBlock.Block.Messages, tx)

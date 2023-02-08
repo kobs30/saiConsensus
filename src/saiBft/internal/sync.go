@@ -1,42 +1,52 @@
 package internal
 
 import (
-	"time"
+	"math"
 
 	"github.com/iamthe1whoknocks/bft/models"
 	"go.uber.org/zap"
 )
 
 // sync node by fixing sleep value
-// fromHandler set to true if this func was invoked from handler, set to false if from process
-func (s *InternalService) syncSleep(msg *models.ConsensusMessage, fromHandler bool) {
-	consensusSyncKey := models.SyncConsensusKey{
-		BlockNumber: msg.BlockNumber,
-		Round:       msg.Round,
+func (s *InternalService) syncSleep(msg *models.ConsensusMessage, localTime int64) {
+	s.Mutex.RLock()
+	defer s.Mutex.RUnlock()
+
+	s.GlobalService.Logger.Debug("process - sync", zap.Duration("sleep before syncing", s.Sleep))
+
+	if len(s.SyncConsensusSlice) == 0 {
+		s.GlobalService.Logger.Debug("process - sync - sync slice is empty")
+		return
 	}
 
-	Service.Mutex.RLock()
-
-	if t, ok := s.SyncConsensusMap[consensusSyncKey]; ok {
-		Service.Mutex.RUnlock()
-		if t == time.Now().Unix() { // do not fix sleep
-			return
-		} else if t < time.Now().UnixNano() {
-			if !fromHandler {
-				delta := time.Now().UnixNano() - t
-				s.Sleep = time.Duration(s.Sleep.Nanoseconds() - delta)
-				s.GlobalService.Logger.Debug("process - syncSleep", zap.Duration("new sleep", s.Sleep))
-				return
-			} else {
-				return
-			}
-
+	//find max
+	var maxTime int64
+	for _, k := range s.SyncConsensusSlice {
+		if maxTime < k.Time {
+			maxTime = k.Time
 		}
-	} else {
-		Service.Mutex.RUnlock()
-		Service.Mutex.Lock()
-		Service.SyncConsensusMap[consensusSyncKey] = time.Now().Unix()
-		Service.Mutex.Unlock()
 	}
+
+	//find min
+	var minTime int64
+	for _, k := range s.SyncConsensusSlice {
+		if minTime > k.Time && minTime != 0 {
+			minTime = k.Time
+		} else {
+			minTime = k.Time
+		}
+	}
+
+	res1 := maxTime - localTime
+
+	res2 := localTime - minTime
+
+	if math.Abs(float64(res1)) > math.Abs(float64(res2)) {
+		s.Sleep = s.Sleep + s.Sleep/10
+	} else if math.Abs(float64(res1)) < math.Abs(float64(res2)) {
+		s.Sleep = s.Sleep - s.Sleep/10
+	} else {
+	}
+	s.GlobalService.Logger.Debug("process - sync", zap.Duration("sleep before after", s.Sleep))
 	return
 }

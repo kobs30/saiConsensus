@@ -131,7 +131,13 @@ var HandleMessage = saiService.HandlerElement{
 				Service.GlobalService.Logger.Sugar().Error(err) // DEBUG
 				return nil, fmt.Errorf("handlers - handle message - marshal bytes : %w", err)
 			}
-			Service.syncSleep(&msg, true)
+
+			Service.Mutex.Lock()
+			Service.SyncConsensusMap[&models.SyncConsensusKey{
+				BlockNumber: msg.BlockNumber,
+				Round:       msg.Round,
+			}]++
+			Service.Mutex.Unlock()
 
 			Service.MsgQueue <- &msg
 		case models.TransactionMsgType:

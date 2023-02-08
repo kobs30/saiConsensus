@@ -94,6 +94,7 @@ func (s *InternalService) Processing() {
 	}
 
 	for {
+		var localCMsgTime = int64(0)
 	startLoop:
 		round := 0
 		s.GlobalService.Logger.Debug("start loop,round = 0") // DEBUG
@@ -157,6 +158,8 @@ func (s *InternalService) Processing() {
 				s.GlobalService.Logger.Error("process - round == 0 - put consensus to ConsensusPool collection", zap.Error(err))
 				goto startLoop
 			}
+
+			localCMsgTime = time.Now().UnixNano()
 
 			err = s.broadcastMsg(consensusMsg, s.GlobalService.GetConfig(SaiBTCaddress, "").String(), false)
 			if err != nil {
@@ -232,7 +235,7 @@ func (s *InternalService) Processing() {
 					goto startLoop
 				}
 
-				Service.syncSleep(newConsensusMsg, true)
+				Service.syncSleep(newConsensusMsg, localCMsgTime)
 
 				err = s.broadcastMsg(newConsensusMsg, s.GlobalService.GetConfig(SaiP2pAddress, "").String(), false)
 				if err != nil {
@@ -541,13 +544,15 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 		newBlock.Block.PreviousBlockHash = ""
 	}
 
+	newBlock.BlockHash = newBlock.Block.BlockHash
+
 	for _, tx := range txMsgs {
 		err, _ := s.Storage.Update(MessagesPoolCol, bson.M{"executed_hash": tx.ExecutedHash}, bson.M{"block_hash": newBlock.BlockHash, "block_number": newBlock.Block.Number}, storageToken)
 		if err != nil {
 			s.GlobalService.Logger.Error("process - round == 7 - form and save new block - update tx blockhash", zap.Error(err))
 			return nil, err
 		}
-		tx.BlockHash = "todo: circular reference"
+		tx.BlockHash = newBlock.BlockHash
 		tx.BlockNumber = newBlock.Block.Number
 		newBlock.Block.Messages = append(newBlock.Block.Messages, tx)
 	}

@@ -94,7 +94,6 @@ func (s *InternalService) Processing() {
 	}
 
 	for {
-		var localCMsgTime = int64(0)
 	startLoop:
 		round := 0
 		s.GlobalService.Logger.Debug("start loop,round = 0") // DEBUG
@@ -159,8 +158,6 @@ func (s *InternalService) Processing() {
 				goto startLoop
 			}
 
-			localCMsgTime = time.Now().UnixNano()
-
 			err = s.broadcastMsg(consensusMsg, s.GlobalService.GetConfig(SaiBTCaddress, "").String(), false)
 			if err != nil {
 				s.GlobalService.Logger.Error("process - round==0 - broadcast consensus message", zap.Error(err))
@@ -172,6 +169,7 @@ func (s *InternalService) Processing() {
 			goto checkRound
 
 		} else {
+			var syncValue int
 			// get consensus messages for the round
 			msgs, err := s.getConsensusMsgForTheRound(round, block.Block.Number, s.GlobalService.GetConfig(SaiStorageToken, "").String())
 			if err != nil {
@@ -235,7 +233,14 @@ func (s *InternalService) Processing() {
 					goto startLoop
 				}
 
-				Service.syncSleep(newConsensusMsg, localCMsgTime)
+				s.Mutex.Lock()
+				s.SyncConsensusMap[&models.SyncConsensusKey{
+					BlockNumber: newConsensusMsg.BlockNumber,
+					Round:       newConsensusMsg.Round,
+				}]++
+				s.Mutex.Unlock()
+
+				syncValue = Service.syncSleep(newConsensusMsg)
 
 				err = s.broadcastMsg(newConsensusMsg, s.GlobalService.GetConfig(SaiP2pAddress, "").String(), false)
 				if err != nil {
@@ -243,7 +248,7 @@ func (s *InternalService) Processing() {
 				}
 			}
 
-			round++
+			round = round + syncValue
 
 			time.Sleep(time.Duration(time.Duration(s.Sleep) * time.Second))
 

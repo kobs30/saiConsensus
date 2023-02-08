@@ -98,14 +98,6 @@ func (s *InternalService) Processing() {
 		round := 0
 		s.GlobalService.Logger.Debug("start loop,round = 0") // DEBUG
 
-		//clean block candidate collection at round = 0
-
-		err := s.removeCandidates(s.GlobalService.GetConfig(SaiStorageToken, "").String())
-		if err != nil {
-			s.GlobalService.Logger.Error("process - clean blockCandidates collection", zap.Error(err))
-			continue
-		}
-
 		// get last block from blockchain collection or create initial block
 		block, err := s.getLastBlockFromBlockChain(s.GlobalService.GetConfig(SaiStorageToken, "").String(), s.GlobalService.GetConfig(SaiBTCaddress, "").String())
 		if err != nil {
@@ -169,7 +161,17 @@ func (s *InternalService) Processing() {
 			goto checkRound
 
 		} else {
+
 			var syncValue int
+			//clean block candidate collection at round = 5
+			if round == 5 {
+				err := s.removeCandidates(s.GlobalService.GetConfig(SaiStorageToken, "").String())
+				if err != nil {
+					s.GlobalService.Logger.Error("process - clean blockCandidates collection", zap.Error(err))
+					continue
+				}
+			}
+
 			// get consensus messages for the round
 			msgs, err := s.getConsensusMsgForTheRound(round, block.Block.Number, s.GlobalService.GetConfig(SaiStorageToken, "").String())
 			if err != nil {
@@ -557,7 +559,9 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 			s.GlobalService.Logger.Error("process - round == 7 - form and save new block - update tx blockhash", zap.Error(err))
 			return nil, err
 		}
-		tx.BlockHash = newBlock.BlockHash
+
+		tx.Votes = [7]uint64{}
+		tx.BlockHash = "todo: circular reference"
 		tx.BlockNumber = newBlock.Block.Number
 		newBlock.Block.Messages = append(newBlock.Block.Messages, tx)
 	}

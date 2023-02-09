@@ -133,7 +133,8 @@ var HandleMessage = saiService.HandlerElement{
 			}
 
 			Service.Mutex.Lock()
-			Service.SyncConsensusMap[&models.SyncConsensusKey{
+			//Service.SyncConsensusMap[string(msg.BlockNumber)+"+"+string(msg.Round)]++
+			Service.SyncConsensusMap[models.SyncConsensusKey{
 				BlockNumber: msg.BlockNumber,
 				Round:       msg.Round,
 			}]++

@@ -58,9 +58,9 @@ type InternalService struct {
 	TxHandlerSyncCh      chan struct{} // chan to handle tx via http/cli
 	IsValidator          bool          //is node a validator
 	//CoreCtx              context.Context
-	DuplicateStorageCh chan *bytes.Buffer               //chan for duplicate save/update/upsert requests to storage
-	SyncConsensusMap   map[*models.SyncConsensusKey]int // for consensus sync
-	Sleep              int                              // moved here to change dynamically
+	DuplicateStorageCh chan *bytes.Buffer              //chan for duplicate save/update/upsert requests to storage
+	SyncConsensusMap   map[models.SyncConsensusKey]int // for consensus sync
+	Sleep              int                             // moved here to change dynamically
 }
 
 // global handler for registering handlers
@@ -74,5 +74,5 @@ var Service = &InternalService{
 	MissedBlocksLinkCh:   make(chan string),
 	TxHandlerSyncCh:      make(chan struct{}),
 	DuplicateStorageCh:   make(chan *bytes.Buffer, 100),
-	SyncConsensusMap:     make(map[*models.SyncConsensusKey]int),
+	SyncConsensusMap:     make(map[models.SyncConsensusKey]int),
 }

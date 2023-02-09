@@ -14,21 +14,17 @@ func (s *InternalService) syncSleep(msg *models.ConsensusMessage) int {
 
 	// Debug
 	for k, v := range s.SyncConsensusMap {
-		s.GlobalService.Logger.Debug("-----", zap.Int("block_number", k.BlockNumber), zap.Int("round", k.Round), zap.Int("count", v))
+		s.GlobalService.Logger.Debug("-----", zap.Any("key", k), zap.Int("count", v))
 	}
 	// Debug
 
-	currentKey := &models.SyncConsensusKey{
+	//currentKey := string(msg.BlockNumber) + "+" + string(msg.Round)
+	currentKey := models.SyncConsensusKey{
 		BlockNumber: msg.BlockNumber,
 		Round:       msg.Round,
 	}
 
 	currentCount := s.SyncConsensusMap[currentKey]
-
-	for k := range s.SyncConsensusMap {
-		k.Processed = true
-	}
-	defer s.clearSyncMap()
 
 	totalKeysLen := len(s.SyncConsensusMap)
 	if totalKeysLen == 0 {
@@ -60,9 +56,5 @@ func (s *InternalService) syncSleep(msg *models.ConsensusMessage) int {
 }
 
 func (s *InternalService) clearSyncMap() {
-	for k := range s.SyncConsensusMap {
-		if k.Processed {
-			delete(s.SyncConsensusMap, k)
-		}
-	}
+	s.SyncConsensusMap = map[models.SyncConsensusKey]int{}
 }

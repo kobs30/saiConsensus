@@ -236,10 +236,12 @@ func (s *InternalService) Processing() {
 				}
 
 				s.Mutex.Lock()
-				s.SyncConsensusMap[&models.SyncConsensusKey{
+				//s.SyncConsensusMap[string(newConsensusMsg.BlockNumber)+"+"+string(newConsensusMsg.Round)]++
+				s.SyncConsensusMap[models.SyncConsensusKey{
 					BlockNumber: newConsensusMsg.BlockNumber,
 					Round:       newConsensusMsg.Round,
 				}]++
+
 				s.Mutex.Unlock()
 
 				syncValue = Service.syncSleep(newConsensusMsg)
@@ -263,7 +265,6 @@ func (s *InternalService) Processing() {
 				goto checkRound
 			} else {
 				s.GlobalService.Logger.Sugar().Debugf("ROUND = %d", round) //DEBUG
-				s.SyncConsensusMap = make(map[*models.SyncConsensusKey]int)
 
 				newBlock, err := s.formAndSaveNewBlock(block, s.GlobalService.GetConfig(SaiBTCaddress, "").String(), s.GlobalService.GetConfig(SaiStorageToken, "").String(), txMsgs, rnd)
 				if err != nil {

@@ -3,7 +3,6 @@ package internal
 import (
 	"bytes"
 	"sync"
-	"time"
 
 	"github.com/iamthe1whoknocks/bft/models"
 	"github.com/iamthe1whoknocks/bft/utils"
@@ -29,10 +28,6 @@ func Init(svc *saiService.Service) {
 		svc.Logger.Fatal("Cannot detect outbound IP address of node")
 	}
 	svc.Logger.Debug("main - init", zap.String("ip address", Service.IpAddress)) //DEBUG
-
-	sleep := Service.GlobalService.GetConfig("sleep", 10).Int()
-	Service.Sleep = time.Duration(sleep * int(time.Second))
-	svc.Logger.Debug("main - init", zap.Duration("sleep", Service.Sleep)) //DEBUG
 
 	Service.Handler[GetMissedBlocks.Name] = GetMissedBlocks
 	Service.Handler[HandleTxFromCli.Name] = HandleTxFromCli
@@ -65,7 +60,7 @@ type InternalService struct {
 	//CoreCtx              context.Context
 	DuplicateStorageCh chan *bytes.Buffer               //chan for duplicate save/update/upsert requests to storage
 	SyncConsensusMap   map[*models.SyncConsensusKey]int // for consensus sync
-	Sleep              time.Duration                    // moved here to change dynamically
+	Sleep              int                              // moved here to change dynamically
 }
 
 // global handler for registering handlers

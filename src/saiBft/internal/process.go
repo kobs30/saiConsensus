@@ -156,7 +156,7 @@ func (s *InternalService) Processing() {
 				goto startLoop
 			}
 
-			time.Sleep(time.Duration(time.Duration(s.Sleep) * time.Second))
+			time.Sleep(time.Duration(s.GlobalService.GetConfig("sleep", 5).Int()) * time.Second)
 			round++
 			goto checkRound
 
@@ -243,21 +243,27 @@ func (s *InternalService) Processing() {
 				s.Mutex.Unlock()
 
 				syncValue = Service.syncSleep(newConsensusMsg)
+				s.GlobalService.Logger.Debug("process - sync sleep", zap.Int("sync value", syncValue))
 
 				err = s.broadcastMsg(newConsensusMsg, s.GlobalService.GetConfig(SaiP2pAddress, "").String(), false)
 				if err != nil {
 					goto startLoop
 				}
 			}
+			s.GlobalService.Logger.Debug("process - sync sleep", zap.Int("round", round), zap.Int("sync value", syncValue))
 
+			if round == 6 {
+				syncValue = 1
+			}
 			round = round + syncValue
 
-			time.Sleep(time.Duration(time.Duration(s.Sleep) * time.Second))
+			time.Sleep(time.Duration(s.GlobalService.GetConfig("sleep", 5).Int()) * time.Second)
 
 			if round < maxRoundNumber {
 				goto checkRound
 			} else {
 				s.GlobalService.Logger.Sugar().Debugf("ROUND = %d", round) //DEBUG
+				s.SyncConsensusMap = make(map[*models.SyncConsensusKey]int)
 
 				newBlock, err := s.formAndSaveNewBlock(block, s.GlobalService.GetConfig(SaiBTCaddress, "").String(), s.GlobalService.GetConfig(SaiStorageToken, "").String(), txMsgs, rnd)
 				if err != nil {

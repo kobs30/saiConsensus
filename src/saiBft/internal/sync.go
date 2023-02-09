@@ -12,6 +12,12 @@ func (s *InternalService) syncSleep(msg *models.ConsensusMessage) int {
 	s.Mutex.Lock()
 	defer s.Mutex.Unlock()
 
+	// Debug
+	for k, v := range s.SyncConsensusMap {
+		s.GlobalService.Logger.Debug("-----", zap.Int("block_number", k.BlockNumber), zap.Int("round", k.Round), zap.Int("count", v))
+	}
+	// Debug
+
 	currentKey := &models.SyncConsensusKey{
 		BlockNumber: msg.BlockNumber,
 		Round:       msg.Round,
@@ -29,12 +35,6 @@ func (s *InternalService) syncSleep(msg *models.ConsensusMessage) int {
 		return 1
 	}
 	s.GlobalService.Logger.Debug("process - sync sleep - map", zap.Int("block_number", msg.BlockNumber), zap.Int("round", msg.Round))
-
-	// Debug
-	for k, v := range s.SyncConsensusMap {
-		s.GlobalService.Logger.Debug("-----", zap.Int("block_number", k.BlockNumber), zap.Int("round", k.Round), zap.Int("count", v))
-	}
-	// Debug
 
 	countForLagging := 0
 	for k := range s.SyncConsensusMap {

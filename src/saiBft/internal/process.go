@@ -276,6 +276,8 @@ func (s *InternalService) Processing() {
 					goto startLoop
 				}
 
+				s.clearSyncMap()
+
 				goto startLoop
 			}
 		}

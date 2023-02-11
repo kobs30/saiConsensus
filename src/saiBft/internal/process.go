@@ -266,6 +266,8 @@ func (s *InternalService) Processing() {
 			} else {
 				s.GlobalService.Logger.Sugar().Debugf("ROUND = %d", round) //DEBUG
 
+				s.clearSyncMap()
+
 				newBlock, err := s.formAndSaveNewBlock(block, s.GlobalService.GetConfig(SaiBTCaddress, "").String(), s.GlobalService.GetConfig(SaiStorageToken, "").String(), txMsgs, rnd)
 				if err != nil {
 					goto startLoop
@@ -275,8 +277,6 @@ func (s *InternalService) Processing() {
 				if err != nil {
 					goto startLoop
 				}
-
-				s.clearSyncMap()
 
 				goto startLoop
 			}

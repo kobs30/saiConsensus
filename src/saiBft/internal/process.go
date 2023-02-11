@@ -235,14 +235,14 @@ func (s *InternalService) Processing() {
 					goto startLoop
 				}
 
-				s.Mutex.Lock()
+				s.SyncConsensus.Mu.Lock()
 				//s.SyncConsensusMap[string(newConsensusMsg.BlockNumber)+"+"+string(newConsensusMsg.Round)]++
-				s.SyncConsensusMap[models.SyncConsensusKey{
+				s.SyncConsensus.Storage[models.SyncConsensusKey{
 					BlockNumber: newConsensusMsg.BlockNumber,
 					Round:       newConsensusMsg.Round,
 				}]++
 
-				s.Mutex.Unlock()
+				s.SyncConsensus.Mu.Unlock()
 
 				syncValue = Service.syncSleep(newConsensusMsg)
 				s.GlobalService.Logger.Debug("process - sync sleep", zap.Int("sync value", syncValue))

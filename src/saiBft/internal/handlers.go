@@ -132,13 +132,13 @@ var HandleMessage = saiService.HandlerElement{
 				return nil, fmt.Errorf("handlers - handle message - marshal bytes : %w", err)
 			}
 
-			Service.Mutex.Lock()
+			Service.SyncConsensus.Mu.Lock()
 			//Service.SyncConsensusMap[string(msg.BlockNumber)+"+"+string(msg.Round)]++
-			Service.SyncConsensusMap[models.SyncConsensusKey{
+			Service.SyncConsensus.Storage[models.SyncConsensusKey{
 				BlockNumber: msg.BlockNumber,
 				Round:       msg.Round,
 			}]++
-			Service.Mutex.Unlock()
+			Service.SyncConsensus.Mu.Unlock()
 
 			Service.MsgQueue <- &msg
 		case models.TransactionMsgType:

@@ -66,7 +66,7 @@ func (is InternalService) execute(data interface{}) interface{} {
 	counter++
 	var Validators []map[string]bool
 	var Distribution []map[string]int64
-	var CustomFld []map[string]string // []map[string]interface{}
+	var CustomFld []map[string]interface{} // []map[string]interface{}
 	var Fee float64
 	var request VMrequest
 	fmt.Println("REQUEST:::::::", data)
@@ -74,6 +74,7 @@ func (is InternalService) execute(data interface{}) interface{} {
 	var Register []map[string]RegType                // [ {contractaddress:{type:token,symbol:GRV,name:Groove,descr:"yet anotehr token"} }, {'amm_'tokencontractaddress:{type:amm,symbol:ammGRV,name:ammGroove, decr:"can contains some amm rules ot whatever"} ,...]
 	fmt.Println("CustomTokens", CustomTokens)
 	fmt.Println("Register", Register)
+	var theScriptHash string
 
 	dataJSON, _ := json.Marshal(data)
 	fmt.Println("REQUEST JSON CONV:::::::", dataJSON)
@@ -106,7 +107,7 @@ func (is InternalService) execute(data interface{}) interface{} {
 		// curl --location --request GET 'http://185.229.119.188:8018' \
 		//--header 'Content-Type: text/plain' \
 		//--data-raw '{"method":"get-tx","data":"{\"method\": \"execute\", \"data\": \"function hello(name) { return '\'' Hello '\''+ name}; hello('\''world'\'')  ;\"}"}'
-		saveScriptData := make(map[string]string)
+		saveScriptData := make(map[string]interface{})
 		saveScriptData[request.Tx.MessageHash] = "saved"
 		CustomFld = append(CustomFld, saveScriptData)
 		return bson.M{"vm_processed": true, "vm_result": true, "vm_response": bson.M{"D": Distribution, "V": Validators, "C": CustomFld, "F": Fee}}
@@ -120,7 +121,7 @@ func (is InternalService) execute(data interface{}) interface{} {
 		Function := parts[1]
 		currentContract = Contract
 		runScript, _ := is.getMessageByHash(Contract)
-		logRecord := make(map[string]string)
+		logRecord := make(map[string]interface{})
 		logRecord[Contract] = "contract was run with " + Function
 		CustomFld = append(CustomFld, logRecord)
 		// Security check!!!
@@ -132,6 +133,7 @@ func (is InternalService) execute(data interface{}) interface{} {
 		myFuncs := functionsList
 
 		var Execute string
+		// if _init() exists Execute += "_init();"
 		for _, f := range myFuncs {
 			re := regexp.MustCompile(f + `\(.*?\)`)
 			matches := re.FindAllString(code, -1)
@@ -140,13 +142,16 @@ func (is InternalService) execute(data interface{}) interface{} {
 				fmt.Println(match)
 			}
 		}
+		theScriptHash = currentContract
 		vmScript.Script = runScript + " " + Execute
 		// ??? if not return vm_result false ???
 		//vmScript.Script = runScript + " " + Function
 	}
 
 	theSender := request.Tx.SenderAddress // request.Tx.Sender
-	theScriptHash := request.Tx.MessageHash
+	if len(theScriptHash) == 0 {
+		theScriptHash = request.Tx.MessageHash
+	}
 	fmt.Println("XXXXX", vmScript.Script)
 	if vmScript.Script == "fly me to the moon" && request.Block == 1 {
 		thevalidator := make(map[string]bool)
@@ -166,13 +171,13 @@ func (is InternalService) execute(data interface{}) interface{} {
 		Distribution = append(Distribution, initbalance)
 		updateInProcessingBalance(request.Block, Distribution)
 
-		initsettings := make(map[string]string)
+		initsettings := make(map[string]interface{})
 		initsettings["FeePerMessageSymbol"] = "0.01"
 		CustomFld = append(CustomFld, initsettings)
-		initsettings = make(map[string]string)
+		initsettings = make(map[string]interface{})
 		initsettings["Fee_getBalance"] = "0.05"
 		CustomFld = append(CustomFld, initsettings)
-		initsettings = make(map[string]string)
+		initsettings = make(map[string]interface{})
 		initsettings["FeeSaveDataPerSymbol"] = "0.01"
 		CustomFld = append(CustomFld, initsettings)
 
@@ -188,6 +193,21 @@ func (is InternalService) execute(data interface{}) interface{} {
 
 	vm.Set("getSender", func(call otto.FunctionCall) otto.Value {
 		res, _ := vm.ToValue(request.Tx.SenderAddress)
+		return res
+	})
+
+	vm.Set("getBlock", func(call otto.FunctionCall) otto.Value {
+		res, _ := vm.ToValue(request.Block)
+		return res
+	})
+
+	vm.Set("getMessageHash", func(call otto.FunctionCall) otto.Value {
+		res, _ := vm.ToValue(request.Tx.MessageHash)
+		return res
+	})
+
+	vm.Set("getScriptHash", func(call otto.FunctionCall) otto.Value {
+		res, _ := vm.ToValue(theScriptHash)
 		return res
 	})
 
@@ -365,8 +385,9 @@ func (is InternalService) execute(data interface{}) interface{} {
 		if err != nil {
 			return otto.FalseValue()
 		}
-		CustomFldElement := make(map[string]string)
-		CustomFldElement[theScriptHash] = string(record)
+		fmt.Println(string(record))
+		CustomFldElement := make(map[string]interface{})
+		CustomFldElement[theScriptHash] = customData //string(record)
 		CustomFld = append(CustomFld, CustomFldElement)
 		return otto.TrueValue()
 	})
@@ -396,7 +417,7 @@ func (is InternalService) execute(data interface{}) interface{} {
 		amount, _ := call.Argument(1).ToInteger()
 		WalletBalance, _ := is.getTokenBalance(token, request.Tx.SenderAddress)
 		if (WalletBalance - amount) > 0 {
-			fromAmount, err := is.addTokenBalance(token, to, int64(0-amount), &CustomTokens)
+			fromAmount, err := is.addTokenBalance(token, request.Tx.SenderAddress, int64(0-amount), &CustomTokens)
 			if err != nil {
 				return otto.FalseValue()
 			}
@@ -410,6 +431,32 @@ func (is InternalService) execute(data interface{}) interface{} {
 			return otto.FalseValue()
 		}
 	})
+
+	vm.Set("transferTokenFromTheContract", func(call otto.FunctionCall) otto.Value {
+		token, _ := call.Argument(0).ToString()
+		to, _ := call.Argument(1).ToString()
+		amount, _ := call.Argument(2).ToInteger()
+		if token == "" {
+			return otto.FalseValue()
+		}
+		fmt.Println("transferTokenFromTheContract", currentContract, ">>>", to, ">>>", amount)
+		contractTokenBalance, _ := is.getTokenBalance(token, currentContract)
+		if (contractTokenBalance - amount) > 0 {
+			fromAmount, err := is.addTokenBalance(token, currentContract, int64(0-amount), &CustomTokens)
+			if err != nil {
+				return otto.FalseValue()
+			}
+			toAmount, err := is.addTokenBalance(token, to, amount, &CustomTokens)
+			if err != nil {
+				return otto.FalseValue()
+			}
+			fmt.Println(fromAmount, ">>>>", toAmount)
+			return otto.TrueValue()
+		} else {
+			return otto.FalseValue()
+		}
+	})
+
 	//vm.SetTimeout
 	/*
 		vm.Interrupt = make(chan func(), 1)
@@ -432,7 +479,7 @@ func (is InternalService) execute(data interface{}) interface{} {
 	}
 
 	fmt.Println(result)
-	CustomFldElement := make(map[string]string)
+	CustomFldElement := make(map[string]interface{})
 	CustomFldElement[theScriptHash], _ = result.ToString()
 	CustomFld = append(CustomFld, CustomFldElement)
 	fmt.Println("callNumber:", counter)
@@ -485,6 +532,7 @@ func (is InternalService) getTokenBalance(Token, Wallet string) (int64, error) {
 	//{"collection":"MessagesPool", "select": { "vm_response.T": { "$elemMatch": { "d1d79e9ed48a3905702143887ba62228eae892117231e1549a80e92f65267b24": { "$elemMatch": { "15UaBLZ7x6czXnFmHxzd3nFQNvXq7DJ3Gp": { "$exists": true } } } } } }, "options": {} }
 	_, blockhainData := is.Storage.Get("MessagesPool", bson.M{"vm_response.T": bson.M{"$elemMatch": bson.M{Token: bson.M{"$elemMatch": bson.M{Wallet: bson.M{"$exists": true}}}}}}, bson.M{})
 	//_, blockhainData := is.Storage.Get("MessagesPool", bson.M{"vm_response.T": bson.M{"$elemMatch": bson.M{Wallet: bson.M{"$exists": 1}}}}, bson.M{})
+	fmt.Println("blockhainData request", bson.M{"vm_response.T": bson.M{"$elemMatch": bson.M{Token: bson.M{"$elemMatch": bson.M{Wallet: bson.M{"$exists": true}}}}}})
 	fmt.Println("blockhainData", string(blockhainData))
 	var jsonBlockchainData JSONRESP
 	err := json.Unmarshal(blockhainData, &jsonBlockchainData)
@@ -495,7 +543,7 @@ func (is InternalService) getTokenBalance(Token, Wallet string) (int64, error) {
 	if len(jsonBlockchainData.Result) > 0 {
 		fmt.Println("datVMResponse getTokenBalance", jsonBlockchainData.Result[0].VMResponse.T)
 	}
-
+	//????? check if jsonBlockchainData.Result[0].VMResponse.T exists ?????
 	var tokenDistr []map[string][]map[string]int64
 	err = json.Unmarshal(jsonBlockchainData.Result[0].VMResponse.T, &tokenDistr)
 	if err != nil {

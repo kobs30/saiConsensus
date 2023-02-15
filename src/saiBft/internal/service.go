@@ -3,7 +3,6 @@ package internal
 import (
 	"bytes"
 	"sync"
-	"time"
 
 	"github.com/iamthe1whoknocks/bft/models"
 	"github.com/iamthe1whoknocks/bft/utils"
@@ -30,10 +29,6 @@ func Init(svc *saiService.Service) {
 	}
 	svc.Logger.Debug("main - init", zap.String("ip address", Service.IpAddress)) //DEBUG
 
-	sleep := Service.GlobalService.GetConfig("sleep", 10).Int()
-	Service.Sleep = time.Duration(sleep * int(time.Second))
-	svc.Logger.Debug("main - init", zap.Duration("sleep", Service.Sleep)) //DEBUG
-
 	Service.Handler[GetMissedBlocks.Name] = GetMissedBlocks
 	Service.Handler[HandleTxFromCli.Name] = HandleTxFromCli
 	Service.Handler[HandleMessage.Name] = HandleMessage
@@ -51,7 +46,6 @@ type InternalService struct {
 	Handler              saiService.Handler  // handlers to define in this specified microservice
 	GlobalService        *saiService.Service // saiService reference
 	Validators           []string
-	Mutex                *sync.RWMutex
 	ConnectedSaiP2pNodes map[string]*models.SaiP2pNode
 	BTCkeys              *models.BtcKeys
 	MsgQueue             chan interface{}
@@ -63,15 +57,14 @@ type InternalService struct {
 	TxHandlerSyncCh      chan struct{} // chan to handle tx via http/cli
 	IsValidator          bool          //is node a validator
 	//CoreCtx              context.Context
-	DuplicateStorageCh chan *bytes.Buffer                //chan for duplicate save/update/upsert requests to storage
-	SyncConsensusMap   map[models.SyncConsensusKey]int64 // for consensus sync
-	Sleep              time.Duration                     // moved here to change dynamically
+	DuplicateStorageCh chan *bytes.Buffer //chan for duplicate save/update/upsert requests to storage
+	SyncConsensus      *SyncConsensus     // for consensus sync
+	Sleep              int                // moved here to change dynamically
 }
 
 // global handler for registering handlers
 var Service = &InternalService{
 	Handler:              saiService.Handler{},
-	Mutex:                new(sync.RWMutex),
 	ConnectedSaiP2pNodes: make(map[string]*models.SaiP2pNode),
 	MsgQueue:             make(chan interface{}),
 	InitialSignalCh:      make(chan interface{}),
@@ -79,5 +72,14 @@ var Service = &InternalService{
 	MissedBlocksLinkCh:   make(chan string),
 	TxHandlerSyncCh:      make(chan struct{}),
 	DuplicateStorageCh:   make(chan *bytes.Buffer, 100),
-	SyncConsensusMap:     make(map[models.SyncConsensusKey]int64),
+	SyncConsensus: &SyncConsensus{
+		Mu:      new(sync.RWMutex),
+		Storage: make(map[models.SyncConsensusKey]int),
+	},
+}
+
+// struct for handling consensus sync
+type SyncConsensus struct {
+	Mu      *sync.RWMutex
+	Storage map[models.SyncConsensusKey]int
 }

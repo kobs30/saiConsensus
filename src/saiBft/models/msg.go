@@ -52,4 +52,5 @@ func DetectMsgTypeFromMap(m map[string]interface{}) (string, error) {
 type SyncConsensusKey struct {
 	BlockNumber int
 	Round       int
+	Processed   bool
 }

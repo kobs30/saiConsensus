@@ -156,11 +156,13 @@ func (s *InternalService) Processing() {
 				goto startLoop
 			}
 
-			time.Sleep(time.Duration(time.Duration(s.Sleep) * time.Second))
+			time.Sleep(time.Duration(s.GlobalService.GetConfig("sleep", 5).Int()) * time.Second)
 			round++
 			goto checkRound
 
 		} else {
+
+			var syncValue int
 			//clean block candidate collection at round = 5
 			if round == 5 {
 				err := s.removeCandidates(s.GlobalService.GetConfig(SaiStorageToken, "").String())
@@ -233,22 +235,38 @@ func (s *InternalService) Processing() {
 					goto startLoop
 				}
 
-				Service.syncSleep(newConsensusMsg, true)
+				s.SyncConsensus.Mu.Lock()
+				//s.SyncConsensusMap[string(newConsensusMsg.BlockNumber)+"+"+string(newConsensusMsg.Round)]++
+				s.SyncConsensus.Storage[models.SyncConsensusKey{
+					BlockNumber: newConsensusMsg.BlockNumber,
+					Round:       newConsensusMsg.Round,
+				}]++
+
+				s.SyncConsensus.Mu.Unlock()
+
+				syncValue = Service.syncSleep(newConsensusMsg)
+				s.GlobalService.Logger.Debug("process - sync sleep", zap.Int("sync value", syncValue))
 
 				err = s.broadcastMsg(newConsensusMsg, s.GlobalService.GetConfig(SaiP2pAddress, "").String(), false)
 				if err != nil {
 					goto startLoop
 				}
 			}
+			s.GlobalService.Logger.Debug("process - sync sleep", zap.Int("round", round), zap.Int("sync value", syncValue))
 
-			round++
+			if round == 6 {
+				syncValue = 1
+			}
+			round = round + syncValue
 
-			time.Sleep(time.Duration(time.Duration(s.Sleep) * time.Second))
+			time.Sleep(time.Duration(s.GlobalService.GetConfig("sleep", 5).Int()) * time.Second)
 
 			if round < maxRoundNumber {
 				goto checkRound
 			} else {
 				s.GlobalService.Logger.Sugar().Debugf("ROUND = %d", round) //DEBUG
+
+				s.clearSyncMap()
 
 				newBlock, err := s.formAndSaveNewBlock(block, s.GlobalService.GetConfig(SaiBTCaddress, "").String(), s.GlobalService.GetConfig(SaiStorageToken, "").String(), txMsgs, rnd)
 				if err != nil {
@@ -542,12 +560,16 @@ func (s *InternalService) formAndSaveNewBlock(previousBlock *models.BlockConsens
 		newBlock.Block.PreviousBlockHash = ""
 	}
 
+	newBlock.BlockHash = newBlock.Block.BlockHash
+
 	for _, tx := range txMsgs {
 		err, _ := s.Storage.Update(MessagesPoolCol, bson.M{"executed_hash": tx.ExecutedHash}, bson.M{"block_hash": newBlock.BlockHash, "block_number": newBlock.Block.Number}, storageToken)
 		if err != nil {
 			s.GlobalService.Logger.Error("process - round == 7 - form and save new block - update tx blockhash", zap.Error(err))
 			return nil, err
 		}
+
+		tx.Votes = [7]uint64{}
 		tx.BlockHash = "todo: circular reference"
 		tx.BlockNumber = newBlock.Block.Number
 		newBlock.Block.Messages = append(newBlock.Block.Messages, tx)

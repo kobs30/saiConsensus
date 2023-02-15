@@ -40,11 +40,17 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 
 	for {
 		data := <-s.MsgQueue
+
 		s.GlobalService.Logger.Debug("chain - got data", zap.Any("data", data)) // DEBUG
 		switch data.(type) {
 		case *models.Tx:
 			txMsg := data.(*models.Tx)
 			Service.GlobalService.Logger.Debug("handlers - handleMessage", zap.String("type", txMsg.Type), zap.Any("msg", txMsg)) // DEBUG
+
+			if txMsg.SenderAddress == s.BTCkeys.Address {
+				Service.GlobalService.Logger.Debug("handlers - handleMessage rejected", zap.String("sender", txMsg.SenderAddress), zap.String("key", s.BTCkeys.Address)) // DEBUG
+				continue
+			}
 
 			msg := &models.TransactionMessage{
 				Tx:          txMsg,
@@ -154,6 +160,12 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 				continue
 			}
 			msg := data.(*models.ConsensusMessage)
+
+			if msg.SenderAddress == s.BTCkeys.Address {
+				Service.GlobalService.Logger.Debug("handlers - consensusMsg rejected", zap.String("sender", msg.SenderAddress), zap.String("key", s.BTCkeys.Address)) // DEBUG
+				continue
+			}
+
 			//Service.GlobalService.Logger.Debug("handlers - handleMessage", zap.String("type", msg.Type), zap.Any("msg", msg)) // DEBUG
 			err := msg.Validate()
 			if err != nil {
@@ -175,6 +187,12 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 		case *models.Block:
 			msg := data.(*models.Block)
 			Service.GlobalService.Logger.Debug("handlers - handleMessage", zap.String("type", msg.Type), zap.Any("msg", msg)) // DEBUG
+
+			if msg.SenderAddress == s.BTCkeys.Address {
+				Service.GlobalService.Logger.Debug("handlers - block rejected", zap.String("sender", msg.SenderAddress), zap.String("key", s.BTCkeys.Address)) // DEBUG
+				continue
+			}
+
 			err := msg.Validate()
 			if err != nil {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - block - validate", zap.Error(err))
@@ -240,6 +258,12 @@ func (s *InternalService) listenFromSaiP2P(saiBTCaddress string) {
 			}
 			msg := data.(*models.RNDMessage)
 			//			Service.GlobalService.Logger.Sugar().Debugf("chain - got rnd message : %+v", msg) //DEBUG
+
+			if msg.SenderAddress == s.BTCkeys.Address {
+				Service.GlobalService.Logger.Debug("handlers - rndMessage rejected", zap.String("sender", msg.SenderAddress), zap.String("key", s.BTCkeys.Address)) // DEBUG
+				continue
+			}
+
 			err := msg.Validate()
 			if err != nil {
 				Service.GlobalService.Logger.Error("listenFromSaiP2P - rndMessage - validate", zap.Error(err))

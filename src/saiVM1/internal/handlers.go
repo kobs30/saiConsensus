@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/robertkrimen/otto"
+	"math"
 	"math/rand"
 	"regexp"
 	"strings"
@@ -693,11 +694,18 @@ func (is InternalService) ammExchange(wallet, token string, amount int64, Custom
 	if exchRate == 0 {
 		return false
 	}
-	if amount < 0 && ammBalance+amount*int64(exchRate) > 0 {
-		ammTokenBalance := amount
-		ammBalance := amount * int64(exchRate)
-		walletTokenBalance := amount
-		walletBalance := -amount * int64(exchRate)
+	theWalletTokenBalance, err := is.getTokenBalance(token, wallet)
+	if err != nil {
+		return false
+	}
+	if theWalletTokenBalance-amount < 0 {
+		return false
+	}
+	if amount < 0 && ammBalance-amount*int64(exchRate) > 0 {
+		ammTokenBalance := 0 - amount              // plus
+		ammBalance := 0 - amount*int64(exchRate)   //minus
+		walletTokenBalance := amount               // minus
+		walletBalance := -amount * int64(exchRate) // plus
 
 		_, err := is.addTokenBalance(token, wallet, walletTokenBalance, CustomTokens)
 		if err != nil {
@@ -717,10 +725,10 @@ func (is InternalService) ammExchange(wallet, token string, amount int64, Custom
 		//updateInProcessingBalance(request.Block,*Distribution)
 	}
 	if amount > 0 && ammTokenBalance-amount*int64(exchRate) > 0 {
-		ammTokenBalance := -amount
-		ammBalance := -amount * int64(exchRate)
-		walletTokenBalance := -amount
-		walletBalance := amount * int64(exchRate)
+		ammTokenBalance := -amount                 // minus
+		ammBalance := amount * int64(exchRate)     // plus
+		walletTokenBalance := amount               // plus
+		walletBalance := -amount * int64(exchRate) // minus
 
 		_, err := is.addTokenBalance(token, wallet, walletTokenBalance, CustomTokens)
 		if err != nil {
@@ -819,10 +827,31 @@ func generateRandomNumbers(distType string, numbersInSet int, min, max, param fl
 		case "exponential":
 			num = rand.ExpFloat64()*float64(max-min) + min
 		case "normal":
-			num = rand.NormFloat64()*float64(max-min) + min
+			mean := 50.0
+			stdDev := 15.0
+			num = math.Round(rand.NormFloat64()*stdDev + mean)
+			if num < min {
+				num = min
+			} else if num > max {
+				num = max
+			}
 		//https://go-recipes.dev/generating-random-numbers-with-go-616d30ccc926
-		//case "poisson":
-		//	num = float64(stats.Poisson(param))
+		case "poisson":
+			for {
+				x := rand.ExpFloat64() / param
+				if x >= 1.0 {
+					continue
+				}
+				p := 1.0
+				for k := 0; k <= int(num); k++ {
+					p *= x * param / float64(k+1)
+				}
+				if rand.Float64() <= p {
+					break
+				}
+				num++
+			}
+			num++
 		//case "lognormal":
 		//	num = rand.LogNormal(param, param)
 		//case "pareto":

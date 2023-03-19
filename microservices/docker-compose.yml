@@ -1,12 +1,12 @@
 version: '3'
 services:
-  sai-btc:
-    build:
-      context: ./saiBtc
-      dockerfile: Dockerfile
-    network_mode: host
-    volumes:
-      - ./saiBtc/build/saibtc.config:/srv/saibtc.config
+#  sai-btc:
+#    build:
+#      context: ./saiBtc
+#      dockerfile: Dockerfile
+#    network_mode: host
+#    volumes:
+#      - ./saiBtc/build/saibtc.config:/srv/saibtc.config
 
   sai-storage:
     build:
@@ -17,40 +17,40 @@ services:
       - ./saiStorage/build/config.json:/srv/config.json
   #      - /root/storage_data:/data/db
 
-  sai-bft:
-    build:
-      context: ./saiBft
-      dockerfile: Dockerfile
-    network_mode: host
-    depends_on:
-      - sai-btc
-      - sai-p2p
-      - sai-storage
-      - sai-p2p-proxy
-    volumes:
-      - ./saiBft/build/config.yml:/srv/config.yml
-      - ./saiBft/build/btc_keys.json:/srv/btc_keys.json
-
-  sai-p2p-proxy:
-    build:
-      context: ./saiP2pProxy
-      dockerfile: Dockerfile
-    network_mode: host
-    volumes:
-      - ./saiP2pProxy/build/config.yml:/srv/config.yml
-
-  sai-p2p:
-    build:
-      context: ./saiP2p
-      dockerfile: Dockerfile
-    network_mode: host
-    volumes:
-      - ./saiP2p/build/p2p_lin64.properties:/srv/p2p_lin64.properties
-
-  sai-vm1:
-    build:
-      context: ./saiVM1
-      dockerfile: Dockerfile
-    network_mode: host
-    volumes:
-      - ./saiVM1/build/config.yml:/srv/config.yml
+#  sai-bft:
+#    build:
+#      context: ./saiBft
+#      dockerfile: Dockerfile
+#    network_mode: host
+#    depends_on:
+#      - sai-btc
+#      - sai-p2p
+#      - sai-storage
+#      - sai-p2p-proxy
+#    volumes:
+#      - ./saiBft/build/config.yml:/srv/config.yml
+#      - ./saiBft/build/btc_keys.json:/srv/btc_keys.json
+#
+#  sai-p2p-proxy:
+#    build:
+#      context: ./saiP2pProxy
+#      dockerfile: Dockerfile
+#    network_mode: host
+#    volumes:
+#      - ./saiP2pProxy/build/config.yml:/srv/config.yml
+#
+#  sai-p2p:
+#    build:
+#      context: ./saiP2p
+#      dockerfile: Dockerfile
+#    network_mode: host
+#    volumes:
+#      - ./saiP2p/build/p2p_lin64.properties:/srv/p2p_lin64.properties
+#
+#  sai-vm1:
+#    build:
+#      context: ./saiVM1
+#      dockerfile: Dockerfile
+#    network_mode: host
+#    volumes:
+#      - ./saiVM1/build/config.yml:/srv/config.yml

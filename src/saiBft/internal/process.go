@@ -258,6 +258,7 @@ func (s *InternalService) Processing() {
 				syncValue = 1
 			}
 			round = round + syncValue
+			//round++
 
 			time.Sleep(time.Duration(s.GlobalService.GetConfig("sleep", 5).Int()) * time.Second)
 

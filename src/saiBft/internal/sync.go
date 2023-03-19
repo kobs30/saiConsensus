@@ -32,15 +32,10 @@ func (s *InternalService) syncSleep(msg *models.ConsensusMessage) int {
 	}
 	s.GlobalService.Logger.Debug("process - sync sleep - map", zap.Int("block_number", msg.BlockNumber), zap.Int("round", msg.Round))
 
-	countForLagging := 0
 	for k := range s.SyncConsensus.Storage {
 		if k.BlockNumber == msg.BlockNumber && k.Round-msg.Round > 1 {
-			countForLagging++
+			return 2
 		}
-	}
-	if countForLagging == totalKeysLen { // если мы отстаем более чем на 1 раунд от любой ноды, независимо от веса -> round = round + 2
-		s.GlobalService.Logger.Debug("process -sync - lagging at all nodes")
-		return 2
 	}
 
 	for k, v := range s.SyncConsensus.Storage {

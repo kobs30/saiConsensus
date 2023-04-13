@@ -566,21 +566,22 @@ func (s *InternalService) GetMissedBlocks(blockNumber int, storageToken string) 
 			continue
 		}
 
-		for _, b := range blocks {
-			//			s.GlobalService.Logger.Debug("chain - get missed blocks - range for blocks to put in map", zap.Int("block_number", b.Block.Number), zap.String("hash", b.BlockHash))
+		s.GlobalService.Logger.Sugar().Debug("chain - get missed blocks - blocks in map", zap.Any("blocks", blocks))
+
+		for i, b := range blocks {
 			block, ok := tempMap[b.Block.Number]
 			if ok {
 				if block.Votes < b.Votes {
-					tempMap[b.Block.Number] = &b
+					tempMap[b.Block.Number] = &blocks[i]
 				}
 			} else {
-				tempMap[b.Block.Number] = &b
+				tempMap[b.Block.Number] = &blocks[i]
 			}
 		}
 
 	}
 
-	s.GlobalService.Logger.Sugar().Debugf("chain - get missed blocks - blocks in map %+v", tempMap)
+	s.GlobalService.Logger.Sugar().Debug("chain - get missed blocks - blocks in map", zap.Any("tmp", tempMap))
 
 	for _, v := range tempMap {
 		resultBlocks = append(resultBlocks, v)

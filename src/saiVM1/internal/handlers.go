@@ -13,6 +13,7 @@ import (
 	// https://go.libhunt.com/otto-alternatives    other languages alternatives
 	"github.com/saiset-co/saiService"
 	"go.mongodb.org/mongo-driver/bson"
+	//"github.com/shopspring/decimal"
 )
 
 func (is InternalService) Handlers() saiService.Handler {
@@ -516,15 +517,19 @@ func (is InternalService) getBalance(Wallet string) (int64, error) {
 
 	// {"vm_response.D":{$elemMatch: {"1FTGGrgfHTsgHsw0f8Hff8": {$exists:true} } } }
 	var WalletBalance int64
+	//WalletBalance, _ := decimal.NewFromString("0")
 	for _, el := range jsonBlockchainData.Result {
 		for _, d := range el.VMResponse.D {
 			balance, ok := d[Wallet]
 			if ok {
 				fmt.Println("-------", d[Wallet])
+				//dBalance, _ := decimal.NewFromString((string(balance)))
+				//WalletBalance = WalletBalance.Add(dBalance)
 				WalletBalance += balance
 			}
 		}
 	}
+	//return WalletBalance.String(), nil
 	return WalletBalance, nil
 }
 

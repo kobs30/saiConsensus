@@ -5,6 +5,7 @@ go 1.18
 require (
 	github.com/robertkrimen/otto v0.2.1
 	github.com/saiset-co/saiService v0.0.0-20221208173505-61ff68417596
+	github.com/shopspring/decimal v1.3.1
 	go.mongodb.org/mongo-driver v1.11.1
 )
 

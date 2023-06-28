@@ -17,7 +17,7 @@ bft_d="saiBft/build"
 bft_f="sai-bft"
 
 echo "Starting the node"
-#docker-compose -f docker-compose-windows.yml up -d
+docker-compose -f docker-compose-windows.yml up -d
 
 echo "Starting the btc"
 if [ -f "$btc_d/$btc_f" ]

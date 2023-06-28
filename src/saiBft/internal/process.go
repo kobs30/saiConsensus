@@ -156,7 +156,7 @@ func (s *InternalService) Processing() {
 				goto startLoop
 			}
 
-			time.Sleep(time.Duration(s.GlobalService.GetConfig("sleep", 5).Int()) * time.Second)
+			time.Sleep(time.Duration(s.GlobalService.GetConfig("sleep", 200).Int()) * time.Millisecond)
 			round++
 			goto checkRound
 
@@ -260,7 +260,7 @@ func (s *InternalService) Processing() {
 			round = round + syncValue
 			//round++
 
-			time.Sleep(time.Duration(s.GlobalService.GetConfig("sleep", 5).Int()) * time.Second)
+			time.Sleep(time.Duration(s.GlobalService.GetConfig("sleep", 200).Int()) * time.Millisecond)
 
 			if round < maxRoundNumber {
 				goto checkRound

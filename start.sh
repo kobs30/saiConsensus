@@ -6,6 +6,7 @@ cd microservices
 dir=$(pwd)
 p2p_d="saiP2p/build"
 p2p_f="p2p_lin64"
+p2p_fs="p2p_lin64.sh"
 p2pp_d="saiP2pProxy/build"
 p2pp_f="sai-p2p"
 btc_d="saiBtc/build"
@@ -16,7 +17,7 @@ bft_d="saiBft/build"
 bft_f="sai-bft"
 
 echo "Starting the node"
-docker-compose -f docker-compose-windows.yml up -d
+#docker-compose -f docker-compose-windows.yml up -d
 
 echo "Starting the btc"
 if [ -f "$btc_d/$btc_f" ]
@@ -32,8 +33,9 @@ echo "Starting the p2p"
 if [ -f "$p2p_d/$p2p_f" ]
 then
   cd $p2p_d
+  chmod +x $p2p_fs
   chmod +x $p2p_f
-  ./$p2p_f 1>"$p2p_f"".log" 2>&1 &
+  ./$p2p_fs $p2p_f 1>"$p2p_f"".log" 2>&1 &
   cd "$dir"
   echo "Done"
 fi
